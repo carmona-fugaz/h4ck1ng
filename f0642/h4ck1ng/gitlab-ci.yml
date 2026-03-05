@@ -27,18 +27,18 @@ dependency_check:
     # Instalar jq para parsear el JSON (imagen Debian, apt disponible)
     - apt-get update -qq && apt-get install -y -qq jq
 
-    # Ejecutar el análisis — comando en una sola línea para evitar que YAML
-    # interprete cada argumento como un comando independiente
-    - /usr/share/dependency-check/bin/dependency-check.sh --project "H4ck1ng" --scan . --format JSON --out .
+    # Usar $CI_PROJECT_DIR explícitamente en --scan y --out para garantizar
+    # que el reporte se genera y se encuentra siempre en el workspace de GitLab
+    - /usr/share/dependency-check/bin/dependency-check.sh --project "H4ck1ng" --scan $CI_PROJECT_DIR --format JSON --out $CI_PROJECT_DIR
 
-    - mv dependency-check-report.json Artifact_Desarrollo_Seguro.json
+    - mv $CI_PROJECT_DIR/dependency-check-report.json $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json
 
     # Contar vulnerabilidades CRITICAL, HIGH o MEDIUM y bloquear si las hay
     - |
       VULN_COUNT=$(jq '[
         .dependencies[]?.vulnerabilities[]?
         | select(.severity == "CRITICAL" or .severity == "HIGH" or .severity == "MEDIUM")
-      ] | length' Artifact_Desarrollo_Seguro.json)
+      ] | length' $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json)
 
       echo "Vulnerabilidades CRITICAL/HIGH/MEDIUM encontradas: $VULN_COUNT"
 

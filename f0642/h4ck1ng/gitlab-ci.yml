@@ -9,22 +9,25 @@ sonarcloud_scan:
  image: sonarsource/sonar-scanner-cli:latest
 
  script:
-   - sonar-scanner
-     -Dsonar.login=$SONAR_TOKEN
-     -Dsonar.host.url=$SONAR_HOST_URL
+   - sonar-scanner -Dsonar.login=$SONAR_TOKEN -Dsonar.host.url=$SONAR_HOST_URL
+   - echo '{"tool":"SonarCloud","status":"analysis_completed"}' > Artifact_Desarrollo_Seguro.json
 
  artifacts:
+   when: always
    paths:
      - Artifact_Desarrollo_Seguro.json
 
 # Job del Dependency Check.
 dependency_check:
   stage: security
-  image: owasp/dependency-check
+
+  image:
+    name: owasp/dependency-check
+    entrypoint: [""]
 
   script:
-    - dependency-check.sh --project "DevSecOpsLab" --scan . --format JSON --out .
-    - mv dependency-check-report.json Artifact_Desarrollo_Seguro.json
+    - /usr/share/dependency-check/bin/dependency-check.sh --project "DevSecOpsLab" --scan . --format JSON --prettyPrint --out .
+    - if [ -f dependency-check-report.json ]; then mv dependency-check-report.json Artifact_Desarrollo_Seguro.json; else echo '{"tool":"DependencyCheck","status":"no_report"}' > Artifact_Desarrollo_Seguro.json; fi
 
   artifacts:
     when: always

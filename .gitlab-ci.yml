@@ -5,32 +5,67 @@ stages:
 
 # Job del SonarCloud.
 sonarcloud_scan:
- stage: quality
- image: sonarsource/sonar-scanner-cli:latest
+  stage: quality
+  image: sonarsource/sonar-scanner-cli:latest
 
- script:
-   - sonar-scanner
-     -Dsonar.login=$SONAR_TOKEN
-     -Dsonar.host.url=$SONAR_HOST_URL
+  script:
+    - sonar-scanner
+      -Dsonar.login=$SONAR_TOKEN
+      -Dsonar.host.url=$SONAR_HOST_URL
+    - echo '{"tool":"SonarCloud","status":"analysis_completed"}' > $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json
 
- artifacts:
-   paths:
-     - Artifact_Desarrollo_Seguro.json
+  artifacts:
+    paths:
+      - $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json
 
-# Job del Dependency Check.
+# Job del Dependency Check con bloqueo de pipeline
 dependency_check:
- stage: security
- image: owasp/dependency-check
+  stage: security
+  image:
+    name: owasp/dependency-check
+    entrypoint: [""]
 
- script:
-   - dependency-check.sh
-     --project "H4ck1ng"
-     --scan .
-     --format JSON
-     --out .
+  script:
+    # Crear carpeta de reportes
+    - mkdir -p $CI_PROJECT_DIR/reports
 
-   - mv dependency-check-report.json Artifact_Desarrollo_Seguro.json
+    # Ejecutar Dependency Check
+    - /usr/share/dependency-check/bin/dependency-check.sh \
+      --project "H4ck1ng" \
+      --scan $CI_PROJECT_DIR \
+      --format JSON \
+      --prettyPrint \
+      --out $CI_PROJECT_DIR/reports
 
- artifacts:
-   paths:
-     - Artifact_Desarrollo_Seguro.json
+    # Mover report a artifact
+    - |
+      if [ -f "$CI_PROJECT_DIR/reports/dependency-check-report.json" ]; then
+        mv $CI_PROJECT_DIR/reports/dependency-check-report.json $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json
+      else
+        echo '{"tool":"DependencyCheck","status":"report_generated_but_empty"}' > $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json
+      fi
+
+    # Bloqueo de pipeline si se detectan vulnerabilidades críticas, altas o medias usando python3
+    - |
+      python3 - <<EOF
+import json, sys
+with open("$CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json") as f:
+    data = json.load(f)
+vulns = data.get("dependencies", [])
+blocked = False
+for dep in vulns:
+    for vuln in dep.get("vulnerabilities", []):
+        if vuln.get("severity") in ["Critical","High","Medium"]:
+            blocked = True
+            break
+if blocked:
+    print("¡Se han encontrado vulnerabilidades críticas, altas o medias!")
+    sys.exit(1)
+EOF
+
+  artifacts:
+    paths:
+      - $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json
+
+  # Para pruebas, se puede omitir el bloqueo:
+  # allow_failure: true

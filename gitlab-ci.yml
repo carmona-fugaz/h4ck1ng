@@ -1,0 +1,36 @@
+stages:
+ - build
+ - security
+ - quality
+
+# Job del SonarCloud.
+sonarcloud_scan:
+ stage: quality
+ image: sonarsource/sonar-scanner-cli:latest
+
+ script:
+   - sonar-scanner
+     -Dsonar.login=$SONAR_TOKEN
+     -Dsonar.host.url=$SONAR_HOST_URL
+
+ artifacts:
+   paths:
+     - Artifact_Desarrollo_Seguro.json
+
+# Job del Dependency Check.
+dependency_check:
+ stage: security
+ image: owasp/dependency-check
+
+ script:
+   - dependency-check.sh
+     --project "H4ck1ng"
+     --scan .
+     --format JSON
+     --out .
+
+   - mv dependency-check-report.json Artifact_Desarrollo_Seguro.json
+
+ artifacts:
+   paths:
+     - Artifact_Desarrollo_Seguro.json

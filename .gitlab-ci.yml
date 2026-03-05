@@ -3,61 +3,61 @@ stages:
   - security
   - quality
 
-# Job del SonarCloud
+# Job del SonarCloud.
 sonarcloud_scan:
   stage: quality
   image: sonarsource/sonar-scanner-cli:latest
-
   script:
-    - sonar-scanner -Dsonar.login=$SONAR_TOKEN -Dsonar.host.url=$SONAR_HOST_URL
-    # Crear artifact que indica que el análisis finalizó
-    - echo '{"tool":"SonarCloud","status":"analysis_completed"}' > $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json
-
+    - sonar-scanner
+      -Dsonar.login=$SONAR_TOKEN
+      -Dsonar.host.url=$SONAR_HOST_URL
   artifacts:
-    when: always
     paths:
-      - $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json
+      - Artifact_Desarrollo_Seguro.json
 
-# Job del Dependency Check
+# Job del Dependency Check.
 dependency_check:
   stage: security
-  image: ubuntu:22.04
-  before_script:
-    # Instalar jq y curl
-    - apt-get update && apt-get install -y curl jq default-jre-headless unzip
-
+  image: owasp/dependency-check  # Imagen basada en Debian (eclipse-temurin), compatible con apt
+  # ──────────────────────────────────────────────────────────────────────────────
+  # Para omitir el bloqueo de la pipeline y probar el flujo completo,
+  # descomenta la siguiente línea o añádela temporalmente:
+  # allow_failure: true
+  # ──────────────────────────────────────────────────────────────────────────────
   script:
-    # Descargar Dependency Check CLI si no está disponible
-    - if [ ! -d "/opt/dependency-check" ]; then \
-        curl -L -o /tmp/dependency-check.zip https://github.com/jeremylong/DependencyCheck/releases/download/v8.3.1/dependency-check-8.3.1-release.zip && \
-        unzip /tmp/dependency-check.zip -d /opt && mv /opt/dependency-check-8.3.1 /opt/dependency-check; \
-      fi
+    # Instalar jq para parsear el JSON generado por dependency-check
+    - apt-get update -qq && apt-get install -y -qq jq
 
-    # Ejecutar el análisis
-    - /opt/dependency-check/dependency-check.sh \
-        --project "H4ck1ng" \
-        --scan $CI_PROJECT_DIR \
-        --format JSON \
-        --prettyPrint \
-        --out $CI_PROJECT_DIR
+    # Ejecutar el análisis de dependencias
+    - dependency-check.sh
+      --project "H4ck1ng"
+      --scan .
+      --format JSON
+      --out .
+    - mv dependency-check-report.json Artifact_Desarrollo_Seguro.json
 
-    # Generar artifact y bloquear pipeline si hay vulnerabilidades críticas, altas o medias
+    # Contar vulnerabilidades de severidad CRITICAL, HIGH o MEDIUM
     - |
-      if [ -f "$CI_PROJECT_DIR/dependency-check-report.json" ]; then
-        mv "$CI_PROJECT_DIR/dependency-check-report.json" "$CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json"
-        CRITICAL_COUNT=$(jq '[.dependencies[].vulnerabilities[]?.severity] | map(select(.=="Critical" or .=="High" or .=="Medium")) | length' $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json)
-        if [ "$CRITICAL_COUNT" -gt 0 ]; then
-          echo "¡Se han encontrado vulnerabilidades críticas, altas o medias!"
-          exit 1
-        fi
+      VULN_COUNT=$(jq '[
+        .dependencies[]?.vulnerabilities[]?
+        | select(.severity == "CRITICAL" or .severity == "HIGH" or .severity == "MEDIUM")
+      ] | length' Artifact_Desarrollo_Seguro.json)
+
+      echo "Vulnerabilidades CRITICAL/HIGH/MEDIUM encontradas: $VULN_COUNT"
+
+      if [ "$VULN_COUNT" -gt 0 ]; then
+        echo ""
+        echo "🚨 ¡Se han encontrado vulnerabilidades críticas, altas o medias!"
+        echo "   Se han detectado $VULN_COUNT vulnerabilidad/es con severidad CRITICAL, HIGH o MEDIUM."
+        echo "   Revisa el artefacto 'Artifact_Desarrollo_Seguro.json' para ver el detalle."
+        echo ""
+        echo "ℹ️  Para omitir este bloqueo y probar la pipeline completa, añade"
+        echo "   'allow_failure: true' en el job 'dependency_check' del fichero .gitlab-ci.yml."
+        exit 1
       else
-        echo '{"tool":"DependencyCheck","status":"report_not_generated"}' > "$CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json"
+        echo "✅ No se han detectado vulnerabilidades críticas, altas o medias. Pipeline desbloqueada."
       fi
 
   artifacts:
-    when: always
     paths:
-      - $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json
-
-  # Para pruebas completas sin bloquear pipeline, se puede usar:
-  # allow_failure: true
+      - Artifact_Desarrollo_Seguro.json

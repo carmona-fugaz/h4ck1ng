@@ -30,7 +30,7 @@ sonarcloud_scan:
     paths:
       - $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json
 
-# Job del Dependency Check.
+# Job del Dependency Check
 dependency_check:
   stage: security
 

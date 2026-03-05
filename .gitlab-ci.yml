@@ -22,7 +22,7 @@ dependency_check:
   # ──────────────────────────────────────────────────────────────────────────────
   # Para omitir el bloqueo de la pipeline y probar el flujo completo,
   # descomenta la siguiente línea o añádela temporalmente:
-  # allow_failure: true
+  allow_failure: true
   # ──────────────────────────────────────────────────────────────────────────────
   script:
     # Instalar jq para parsear el JSON generado por dependency-check

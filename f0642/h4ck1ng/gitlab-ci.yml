@@ -6,21 +6,11 @@ stages:
 # Job del SonarCloud.
 sonarcloud_scan:
   stage: quality
-  image: ubuntu:latest
-  services:
-    - docker:dind
-  variables:
-    DOCKER_HOST: tcp://docker:2375
-    DOCKER_TLS_CERTDIR: ""
+  image: sonarsource/sonar-scanner-cli:latest
   script:
-    # Instalar el cliente Docker en Ubuntu para poder lanzar la imagen de SonarCloud
-    - apt-get update -qq && apt-get install -y -qq docker.io
-
-    - docker run --rm
-      -e SONAR_TOKEN=$SONAR_TOKEN
-      -e SONAR_HOST_URL=$SONAR_HOST_URL
-      -v "$CI_PROJECT_DIR:/usr/src"
-      sonarsource/sonar-scanner-cli:latest
+    - sonar-scanner
+      -Dsonar.login=$SONAR_TOKEN
+      -Dsonar.host.url=$SONAR_HOST_URL
   artifacts:
     paths:
       - Artifact_Desarrollo_Seguro.json
@@ -28,31 +18,20 @@ sonarcloud_scan:
 # Job del Dependency Check.
 dependency_check:
   stage: security
-  image: ubuntu:latest        # Ubuntu como base → apt y jq disponibles
-  services:
-    - docker:dind             # Docker-in-Docker para poder usar la imagen de OWASP
-  variables:
-    DOCKER_HOST: tcp://docker:2375
-    DOCKER_TLS_CERTDIR: ""
+  image: owasp/dependency-check  # Basada en Debian (eclipse-temurin), compatible con apt
   # ──────────────────────────────────────────────────────────────────────────
   # Para omitir el bloqueo y probar la pipeline completa, descomenta:
   # allow_failure: true
   # ──────────────────────────────────────────────────────────────────────────
   script:
-    # Instalar docker.io y jq desde apt (Ubuntu, sin problemas de compatibilidad)
-    - apt-get update -qq && apt-get install -y -qq docker.io jq
+    # Instalar jq para parsear el JSON (imagen Debian, apt disponible)
+    - apt-get update -qq && apt-get install -y -qq jq
 
-    # Lanzar la imagen OWASP Dependency-Check dentro del contenedor Ubuntu,
-    # montando el directorio del proyecto para que lo analice
-    - docker run --rm
-      -v "$CI_PROJECT_DIR:/src"
-      owasp/dependency-check
-      --project "H4ck1ng"
-      --scan /src
-      --format JSON
-      --out /src
+    # Ejecutar el análisis — comando en una sola línea para evitar que YAML
+    # interprete cada argumento como un comando independiente
+    - /usr/share/dependency-check/bin/dependency-check.sh --project "H4ck1ng" --scan . --format JSON --out .
 
-    - mv "$CI_PROJECT_DIR/dependency-check-report.json" Artifact_Desarrollo_Seguro.json
+    - mv dependency-check-report.json Artifact_Desarrollo_Seguro.json
 
     # Contar vulnerabilidades CRITICAL, HIGH o MEDIUM y bloquear si las hay
     - |

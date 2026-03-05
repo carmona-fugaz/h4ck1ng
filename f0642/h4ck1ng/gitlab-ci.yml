@@ -7,7 +7,8 @@ stages:
 sonarcloud_scan:
   stage: quality
   image: sonarsource/sonar-scanner-cli:latest
-
+#  Quitar el hashtag para probar todo el pipeline aunque existan vulnerabilidades
+#  allow_failure: true
   script:
     - |
       sonar-scanner \
@@ -37,12 +38,13 @@ dependency_check:
   image:
     name: owasp/dependency-check
     entrypoint: [""]
-
+#  Quitar el hashtag para probar todo el pipeline aunque existan vulnerabilidades
+#  allow_failure: true
   script:
     - mkdir -p $CI_PROJECT_DIR/reports
 
     - /usr/share/dependency-check/bin/dependency-check.sh \
-      --project "DevSecOpsLab" \
+      --project "H4ck1ng" \
       --scan $CI_PROJECT_DIR \
       --format JSON \
       --prettyPrint \

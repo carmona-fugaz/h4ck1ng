@@ -1,91 +1,81 @@
 stages:
- - build
- - security
- - quality
+  - build
+  - security
+  - quality
 
 # Job del SonarCloud.
 sonarcloud_scan:
   stage: quality
-  image: sonarsource/sonar-scanner-cli:latest
-
+  image: ubuntu:latest
+  services:
+    - docker:dind
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
   script:
-    # Ejecutar el análisis de SonarCloud
-    - apt-get update && apt-get install -y jq
-    - sonar-scanner -Dsonar.login=$SONAR_TOKEN -Dsonar.host.url=$SONAR_HOST_URL
+    # Instalar el cliente Docker en Ubuntu para poder lanzar la imagen de SonarCloud
+    - apt-get update -qq && apt-get install -y -qq docker.io
 
-    # Generar artifact básico con estado inicial
-    - echo '{"tool":"SonarCloud","status":"analysis_completed"}' > $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json
-
-    # Analizar el reporte de SonarCloud (simulación JSON)
-    # En un escenario real, SonarCloud devuelve un reporte mediante API.
-    # Aquí asumimos que tienes un JSON con vulnerabilidades para bloquear pipeline.
-    - |
-      # Ejemplo: simular extracción de vulnerabilidades
-      # Para la práctica podemos crear un array vacío si no hay vulnerabilidades
-      echo '{"vulnerabilities":[]}' > $CI_PROJECT_DIR/sonar_report.json
-
-      # Contar vulnerabilidades críticas, altas o medias
-      CRITICAL_HIGH_MED=$(jq '[.vulnerabilities[]? | select(.severity=="Critical" or .severity=="High" or .severity=="Medium")] | length' $CI_PROJECT_DIR/sonar_report.json)
-
-      if [ "$CRITICAL_HIGH_MED" -gt 0 ]; then
-        echo "¡Se han encontrado vulnerabilidades críticas, altas o medias en SonarCloud!"
-        exit 1
-      else
-        echo "No se han detectado vulnerabilidades críticas, altas o medias en SonarCloud."
-      fi
-
+    - docker run --rm
+      -e SONAR_TOKEN=$SONAR_TOKEN
+      -e SONAR_HOST_URL=$SONAR_HOST_URL
+      -v "$CI_PROJECT_DIR:/usr/src"
+      sonarsource/sonar-scanner-cli:latest
   artifacts:
-    when: always
     paths:
-      - $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json
+      - Artifact_Desarrollo_Seguro.json
 
-# Job del Dependency Check
+# Job del Dependency Check.
 dependency_check:
   stage: security
-
-  image:
-    name: owasp/dependency-check
-    entrypoint: [""]
-
+  image: ubuntu:latest        # Ubuntu como base → apt y jq disponibles
+  services:
+    - docker:dind             # Docker-in-Docker para poder usar la imagen de OWASP
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+  # ──────────────────────────────────────────────────────────────────────────
+  # Para omitir el bloqueo y probar la pipeline completa, descomenta:
+  # allow_failure: true
+  # ──────────────────────────────────────────────────────────────────────────
   script:
-    - mkdir -p $CI_PROJECT_DIR/reports
+    # Instalar docker.io y jq desde apt (Ubuntu, sin problemas de compatibilidad)
+    - apt-get update -qq && apt-get install -y -qq docker.io jq
 
-    # Ejecutar Dependency Check
-    - /usr/share/dependency-check/bin/dependency-check.sh \
-      --project "DevSecOpsLab" \
-      --scan $CI_PROJECT_DIR \
-      --format JSON \
-      --prettyPrint \
-      --out $CI_PROJECT_DIR/reports
+    # Lanzar la imagen OWASP Dependency-Check dentro del contenedor Ubuntu,
+    # montando el directorio del proyecto para que lo analice
+    - docker run --rm
+      -v "$CI_PROJECT_DIR:/src"
+      owasp/dependency-check
+      --project "H4ck1ng"
+      --scan /src
+      --format JSON
+      --out /src
 
-    # Mover el reporte al artifact
+    - mv "$CI_PROJECT_DIR/dependency-check-report.json" Artifact_Desarrollo_Seguro.json
+
+    # Contar vulnerabilidades CRITICAL, HIGH o MEDIUM y bloquear si las hay
     - |
-      if [ -f "$CI_PROJECT_DIR/reports/dependency-check-report.json" ]; then
-        mv $CI_PROJECT_DIR/reports/dependency-check-report.json $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json
+      VULN_COUNT=$(jq '[
+        .dependencies[]?.vulnerabilities[]?
+        | select(.severity == "CRITICAL" or .severity == "HIGH" or .severity == "MEDIUM")
+      ] | length' Artifact_Desarrollo_Seguro.json)
+
+      echo "Vulnerabilidades CRITICAL/HIGH/MEDIUM encontradas: $VULN_COUNT"
+
+      if [ "$VULN_COUNT" -gt 0 ]; then
+        echo ""
+        echo "🚨 ¡Se han encontrado vulnerabilidades críticas, altas o medias!"
+        echo "   Se han detectado $VULN_COUNT vulnerabilidad/es con severidad CRITICAL, HIGH o MEDIUM."
+        echo "   Revisa el artefacto 'Artifact_Desarrollo_Seguro.json' para ver el detalle."
+        echo ""
+        echo "ℹ️  Para omitir este bloqueo y probar la pipeline completa, añade"
+        echo "   'allow_failure: true' en el job 'dependency_check' del fichero .gitlab-ci.yml."
+        exit 1
       else
-        echo '{"tool":"DependencyCheck","status":"report_generated_but_empty"}' > $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json
+        echo "✅ No se han detectado vulnerabilidades críticas, altas o medias. Pipeline desbloqueada."
       fi
 
-    # Bloqueo pipeline basado en vulnerabilidades críticas, altas o medias
-    - |
-      python3 << EOF
-      import json
-      import sys
-      with open("$CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json") as f:
-          data = json.load(f)
-      vulns = sum(
-          1 for d in data.get("dependencies", [])
-          for v in d.get("vulnerabilities", [])
-          if v.get("severity") in ["Critical","High","Medium"]
-      )
-      if vulns > 0:
-          print("¡Se han encontrado vulnerabilidades críticas, altas o medias!")
-          sys.exit(1)
-      else:
-          print("No se han detectado vulnerabilidades críticas, altas o medias.")
-      EOF
-
   artifacts:
-    when: always
     paths:
-      - $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json
+      - Artifact_Desarrollo_Seguro.json

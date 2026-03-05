@@ -17,7 +17,7 @@ sonarcloud_scan:
    paths:
      - Artifact_Desarrollo_Seguro.json
 
-# Job del Dependency Check.
+# Job del Dependency Check
 dependency_check:
   stage: security
 

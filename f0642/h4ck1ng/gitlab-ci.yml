@@ -18,27 +18,30 @@ sonarcloud_scan:
 # Job del Dependency Check.
 dependency_check:
   stage: security
-  image: owasp/dependency-check  # Basada en Debian (eclipse-temurin), compatible con apt
-  # ──────────────────────────────────────────────────────────────────────────
-  # Para omitir el bloqueo y probar la pipeline completa, descomenta:
+  image: owasp/dependency-check  # Imagen basada en Debian (eclipse-temurin), compatible con apt
+  # ──────────────────────────────────────────────────────────────────────────────
+  # Para omitir el bloqueo de la pipeline y probar el flujo completo,
+  # descomenta la siguiente línea o añádela temporalmente:
   # allow_failure: true
-  # ──────────────────────────────────────────────────────────────────────────
+  # ──────────────────────────────────────────────────────────────────────────────
   script:
-    # Instalar jq para parsear el JSON (imagen Debian, apt disponible)
+    # Instalar jq para parsear el JSON generado por dependency-check
     - apt-get update -qq && apt-get install -y -qq jq
 
-    # Usar $CI_PROJECT_DIR explícitamente en --scan y --out para garantizar
-    # que el reporte se genera y se encuentra siempre en el workspace de GitLab
-    - /usr/share/dependency-check/bin/dependency-check.sh --project "H4ck1ng" --scan $CI_PROJECT_DIR --format JSON --out $CI_PROJECT_DIR
+    # Ejecutar el análisis de dependencias
+    - dependency-check.sh
+      --project "H4ck1ng"
+      --scan .
+      --format JSON
+      --out .
+    - mv dependency-check-report.json Artifact_Desarrollo_Seguro.json
 
-    - mv $CI_PROJECT_DIR/dependency-check-report.json $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json
-
-    # Contar vulnerabilidades CRITICAL, HIGH o MEDIUM y bloquear si las hay
+    # Contar vulnerabilidades de severidad CRITICAL, HIGH o MEDIUM
     - |
       VULN_COUNT=$(jq '[
         .dependencies[]?.vulnerabilities[]?
         | select(.severity == "CRITICAL" or .severity == "HIGH" or .severity == "MEDIUM")
-      ] | length' $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json)
+      ] | length' Artifact_Desarrollo_Seguro.json)
 
       echo "Vulnerabilidades CRITICAL/HIGH/MEDIUM encontradas: $VULN_COUNT"
 

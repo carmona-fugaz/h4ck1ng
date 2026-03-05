@@ -19,19 +19,14 @@ sonarcloud_scan:
 
 # Job del Dependency Check.
 dependency_check:
- stage: security
- image: owasp/dependency-check
+  stage: security
+  image: owasp/dependency-check
 
- script:
-   - dependency-check.sh
-     --project "H4ck1ng"
-     --scan .
-     --format JSON
-     --out .
-     --ls -R
+  script:
+    - dependency-check.sh --project "DevSecOpsLab" --scan . --format JSON --out .
+    - mv dependency-check-report.json Artifact_Desarrollo_Seguro.json
 
-   - mv dependency-check-report.json Artifact_Desarrollo_Seguro.json
-
- artifacts:
-   paths:
-     - Artifact_Desarrollo_Seguro.json
+  artifacts:
+    when: always
+    paths:
+      - Artifact_Desarrollo_Seguro.json

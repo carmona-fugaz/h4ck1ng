@@ -5,17 +5,17 @@ stages:
 
 # Job del SonarCloud.
 sonarcloud_scan:
- stage: quality
- image: sonarsource/sonar-scanner-cli:latest
+  stage: quality
+  image: sonarsource/sonar-scanner-cli:latest
 
- script:
-   - sonar-scanner -Dsonar.login=$SONAR_TOKEN -Dsonar.host.url=$SONAR_HOST_URL
-   - echo '{"tool":"SonarCloud","status":"analysis_completed"}' > Artifact_Desarrollo_Seguro.json
+  script:
+    - sonar-scanner -Dsonar.login=$SONAR_TOKEN -Dsonar.host.url=$SONAR_HOST_URL
+    - echo '{"tool":"SonarCloud","status":"analysis_completed"}' > $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json
 
- artifacts:
-   when: always
-   paths:
-     - Artifact_Desarrollo_Seguro.json
+  artifacts:
+    when: always
+    paths:
+      - $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json
 
 # Job del Dependency Check
 dependency_check:
@@ -26,10 +26,22 @@ dependency_check:
     entrypoint: [""]
 
   script:
-    - /usr/share/dependency-check/bin/dependency-check.sh --project "DevSecOpsLab" --scan . --format JSON --prettyPrint --out .
-    - if [ -f dependency-check-report.json ]; then mv dependency-check-report.json Artifact_Desarrollo_Seguro.json; else echo '{"tool":"DependencyCheck","status":"no_report"}' > Artifact_Desarrollo_Seguro.json; fi
+    - /usr/share/dependency-check/bin/dependency-check.sh
+      --project "DevSecOpsLab"
+      --scan $CI_PROJECT_DIR
+      --format JSON
+      --prettyPrint
+      --noupdate
+      --out $CI_PROJECT_DIR
+
+    - |
+      if [ -f "$CI_PROJECT_DIR/dependency-check-report.json" ]; then
+        mv $CI_PROJECT_DIR/dependency-check-report.json $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json
+      else
+        echo '{"tool":"DependencyCheck","status":"report_not_generated"}' > $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json
+      fi
 
   artifacts:
     when: always
     paths:
-      - Artifact_Desarrollo_Seguro.json
+      - $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json

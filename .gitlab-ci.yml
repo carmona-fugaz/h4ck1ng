@@ -18,25 +18,22 @@ sonarcloud_scan:
 # Job del Dependency Check.
 dependency_check:
   stage: security
-  image: owasp/dependency-check  # Imagen basada en Debian (eclipse-temurin), compatible con apt
-  # ──────────────────────────────────────────────────────────────────────────────
-  # Para omitir el bloqueo de la pipeline y probar el flujo completo,
-  # descomenta la siguiente línea o añádela temporalmente:
-  allow_failure: true
-  # ──────────────────────────────────────────────────────────────────────────────
+  image: owasp/dependency-check  # Basada en Debian (eclipse-temurin), compatible con apt
+  # ──────────────────────────────────────────────────────────────────────────
+  # Para omitir el bloqueo y probar la pipeline completa, descomenta:
+  # allow_failure: true
+  # ──────────────────────────────────────────────────────────────────────────
   script:
-    # Instalar jq para parsear el JSON generado por dependency-check
+    # Instalar jq para parsear el JSON (imagen Debian, apt disponible)
     - apt-get update -qq && apt-get install -y -qq jq
 
-    # Ejecutar el análisis de dependencias
-    - dependency-check.sh
-      --project "H4ck1ng"
-      -s .
-      -f JSON
-      -o .
+    # Ejecutar el análisis — comando en una sola línea para evitar que YAML
+    # interprete cada argumento como un comando independiente
+    - /usr/share/dependency-check/bin/dependency-check.sh --project "H4ck1ng" --scan . --format JSON --out .
+
     - mv dependency-check-report.json Artifact_Desarrollo_Seguro.json
 
-    # Contar vulnerabilidades de severidad CRITICAL, HIGH o MEDIUM
+    # Contar vulnerabilidades CRITICAL, HIGH o MEDIUM y bloquear si las hay
     - |
       VULN_COUNT=$(jq '[
         .dependencies[]?.vulnerabilities[]?

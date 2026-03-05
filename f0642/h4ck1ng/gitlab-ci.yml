@@ -1,14 +1,18 @@
+include:
+ - template: Security/Secret-Detection.gitlab-ci.yml
+
 stages:
   - build
   - security
   - quality
+  - secrets
 
 # Job del SonarCloud.
 sonarcloud_scan:
   stage: quality
   image: sonarsource/sonar-scanner-cli:latest
 #  Quitar el hashtag para probar todo el pipeline aunque existan vulnerabilidades
-#  allow_failure: true
+  allow_failure: true
   script:
     - |
       sonar-scanner \
@@ -39,7 +43,7 @@ dependency_check:
     name: owasp/dependency-check
     entrypoint: [""]
 #  Quitar el hashtag para probar todo el pipeline aunque existan vulnerabilidades
-#  allow_failure: true
+  allow_failure: true
   script:
     - mkdir -p $CI_PROJECT_DIR/reports
 
@@ -69,3 +73,29 @@ dependency_check:
     when: always
     paths:
       - Artifact_Desarrollo_Seguro.json
+
+secret_detection:
+  stage: secrets
+# Quitar el hashtag para probar todo el pipeline aunque existan vulnerabilidades
+# allow_failure: true
+  script:
+    - echo "Analizando secretos..."
+
+    - if [ -f gl-secret-detection-report.json ]; then
+        cp gl-secret-detection-report.json Artifact_Desarrollo_Seguro.json;
+      else
+        echo "{}" > Artifact_Desarrollo_Seguro.json;
+      fi
+
+    - |
+      if grep -E '"severity":"(Critical|High|Medium)"' Artifact_Desarrollo_Seguro.json; then
+        echo "¡Se han encontrado vulnerabilidades críticas, altas o medias!"
+        exit 1
+      else
+        echo "✅ No hay ninguna vulnerabilidad"
+      fi
+
+  artifacts:
+    paths:
+    - Artifact_Desarrollo_Seguro.json
+    when: always

@@ -68,21 +68,22 @@ dependency_check:
 
     # Bloqueo pipeline basado en vulnerabilidades críticas, altas o medias
     - |
-      python3 - << EOF
-import json, sys
-with open("$CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json") as f:
-    data = json.load(f)
-vulns = sum(
-    1 for d in data.get("dependencies", [])
-    for v in d.get("vulnerabilities", [])
-    if v.get("severity") in ["Critical","High","Medium"]
-)
-if vulns > 0:
-    print("¡Se han encontrado vulnerabilidades críticas, altas o medias!")
-    sys.exit(1)
-else:
-    print("No se han detectado vulnerabilidades críticas, altas o medias.")
-EOF
+      python3 << EOF
+      import json
+      import sys
+      with open("$CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json") as f:
+          data = json.load(f)
+      vulns = sum(
+          1 for d in data.get("dependencies", [])
+          for v in d.get("vulnerabilities", [])
+          if v.get("severity") in ["Critical","High","Medium"]
+      )
+      if vulns > 0:
+          print("¡Se han encontrado vulnerabilidades críticas, altas o medias!")
+          sys.exit(1)
+      else:
+          print("No se han detectado vulnerabilidades críticas, altas o medias.")
+      EOF
 
   artifacts:
     when: always

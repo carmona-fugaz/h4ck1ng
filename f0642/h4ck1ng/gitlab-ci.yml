@@ -20,16 +20,17 @@ sonarcloud_scan:
         echo "¡Se han encontrado vulnerabilidades críticas, altas o medias!"
         echo '{"tool":"SonarCloud","status":"vulnerabilities_found"}' > $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json
         exit 1
+      else
+        echo "✅ No hay ninguna vulnerabilidad"
+        echo '{"tool":"SonarCloud","status":"analysis_completed"}' > $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json
       fi
-
-      echo '{"tool":"SonarCloud","status":"analysis_completed"}' > $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json
 
   artifacts:
     when: always
     paths:
       - $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json
 
-# Job del Dependency Check
+# Job del Dependency Check.
 dependency_check:
   stage: security
 
@@ -58,6 +59,8 @@ dependency_check:
       if grep -qiE '"severity"\s*:\s*"(CRITICAL|HIGH|MEDIUM)"' "$CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json"; then
         echo "¡Se han encontrado vulnerabilidades críticas, altas o medias!"
         exit 1
+      else
+        echo "✅ No hay ninguna vulnerabilidad"
       fi
 
   artifacts:

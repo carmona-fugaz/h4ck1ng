@@ -1,71 +1,63 @@
 stages:
- - build
- - security
- - quality
+  - build
+  - security
+  - quality
 
-# Job del SonarCloud.
+# Job del SonarCloud
 sonarcloud_scan:
   stage: quality
   image: sonarsource/sonar-scanner-cli:latest
 
   script:
-    - sonar-scanner
-      -Dsonar.login=$SONAR_TOKEN
-      -Dsonar.host.url=$SONAR_HOST_URL
+    - sonar-scanner -Dsonar.login=$SONAR_TOKEN -Dsonar.host.url=$SONAR_HOST_URL
+    # Crear artifact que indica que el análisis finalizó
     - echo '{"tool":"SonarCloud","status":"analysis_completed"}' > $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json
 
   artifacts:
+    when: always
     paths:
       - $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json
 
-# Job del Dependency Check con bloqueo de pipeline
+# Job del Dependency Check
 dependency_check:
   stage: security
-  image:
-    name: owasp/dependency-check
-    entrypoint: [""]
+  image: ubuntu:22.04
+  before_script:
+    # Instalar jq y curl
+    - apt-get update && apt-get install -y curl jq default-jre-headless unzip
 
   script:
-    # Crear carpeta de reportes
-    - mkdir -p $CI_PROJECT_DIR/reports
-
-    # Ejecutar Dependency Check
-    - /usr/share/dependency-check/bin/dependency-check.sh \
-      --project "H4ck1ng" \
-      --scan $CI_PROJECT_DIR \
-      --format JSON \
-      --prettyPrint \
-      --out $CI_PROJECT_DIR/reports
-
-    # Mover report a artifact
-    - |
-      if [ -f "$CI_PROJECT_DIR/reports/dependency-check-report.json" ]; then
-        mv $CI_PROJECT_DIR/reports/dependency-check-report.json $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json
-      else
-        echo '{"tool":"DependencyCheck","status":"report_generated_but_empty"}' > $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json
+    # Descargar Dependency Check CLI si no está disponible
+    - if [ ! -d "/opt/dependency-check" ]; then \
+        curl -L -o /tmp/dependency-check.zip https://github.com/jeremylong/DependencyCheck/releases/download/v8.3.1/dependency-check-8.3.1-release.zip && \
+        unzip /tmp/dependency-check.zip -d /opt && mv /opt/dependency-check-8.3.1 /opt/dependency-check; \
       fi
 
-    # Bloqueo de pipeline si se detectan vulnerabilidades críticas, altas o medias usando python3
+    # Ejecutar el análisis
+    - /opt/dependency-check/dependency-check.sh \
+        --project "H4ck1ng" \
+        --scan $CI_PROJECT_DIR \
+        --format JSON \
+        --prettyPrint \
+        --out $CI_PROJECT_DIR
+
+    # Generar artifact y bloquear pipeline si hay vulnerabilidades críticas, altas o medias
     - |
-      python3 - <<EOF
-import json, sys
-with open("$CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json") as f:
-    data = json.load(f)
-vulns = data.get("dependencies", [])
-blocked = False
-for dep in vulns:
-    for vuln in dep.get("vulnerabilities", []):
-        if vuln.get("severity") in ["Critical","High","Medium"]:
-            blocked = True
-            break
-if blocked:
-    print("¡Se han encontrado vulnerabilidades críticas, altas o medias!")
-    sys.exit(1)
-EOF
+      if [ -f "$CI_PROJECT_DIR/dependency-check-report.json" ]; then
+        mv "$CI_PROJECT_DIR/dependency-check-report.json" "$CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json"
+        CRITICAL_COUNT=$(jq '[.dependencies[].vulnerabilities[]?.severity] | map(select(.=="Critical" or .=="High" or .=="Medium")) | length' $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json)
+        if [ "$CRITICAL_COUNT" -gt 0 ]; then
+          echo "¡Se han encontrado vulnerabilidades críticas, altas o medias!"
+          exit 1
+        fi
+      else
+        echo '{"tool":"DependencyCheck","status":"report_not_generated"}' > "$CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json"
+      fi
 
   artifacts:
+    when: always
     paths:
       - $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json
 
-  # Para pruebas, se puede omitir el bloqueo:
+  # Para pruebas completas sin bloquear pipeline, se puede usar:
   # allow_failure: true

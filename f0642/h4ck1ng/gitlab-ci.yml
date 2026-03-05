@@ -7,63 +7,60 @@ stages:
 sonarcloud_scan:
   stage: quality
   image: sonarsource/sonar-scanner-cli:latest
+
   script:
-    - sonar-scanner
-      -Dsonar.login=$SONAR_TOKEN
-      -Dsonar.host.url=$SONAR_HOST_URL
+    - |
+      sonar-scanner \
+        -Dsonar.login=$SONAR_TOKEN \
+        -Dsonar.host.url=$SONAR_HOST_URL \
+        -Dsonar.qualitygate.wait=true
+      SCAN_EXIT=$?
+
+      if [ $SCAN_EXIT -ne 0 ]; then
+        echo "¡Se han encontrado vulnerabilidades críticas, altas o medias!"
+        echo '{"tool":"SonarCloud","status":"vulnerabilities_found"}' > $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json
+        exit 1
+      fi
+
+      echo '{"tool":"SonarCloud","status":"analysis_completed"}' > $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json
+
   artifacts:
+    when: always
     paths:
-      - Artifact_Desarrollo_Seguro.json
+      - $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json
 
 # Job del Dependency Check.
 dependency_check:
   stage: security
-  image: owasp/dependency-check
-  # ──────────────────────────────────────────────────────────────────────────
-  # Para omitir el bloqueo y probar la pipeline completa, descomenta:
-  # allow_failure: true
-  # ──────────────────────────────────────────────────────────────────────────
+
+  image:
+    name: owasp/dependency-check
+    entrypoint: [""]
+
   script:
-    - apt-get update -qq && apt-get install -y -qq jq
+    - mkdir -p $CI_PROJECT_DIR/reports
 
-    - /usr/share/dependency-check/bin/dependency-check.sh --project "H4ck1ng" --scan $CI_PROJECT_DIR --format JSON --out $CI_PROJECT_DIR
-
-    # Localizar el reporte generado para depurar si no aparece donde se espera
-    - echo "=== Buscando dependency-check-report.json en todo el sistema ===" && find / -name "dependency-check-report.json" 2>/dev/null || echo "AVISO':' No se encontró el fichero"
-
-    # Listar el contenido del directorio de trabajo para confirmar qué hay
-    - echo "=== Contenido de CI_PROJECT_DIR ===" && ls -la $CI_PROJECT_DIR
-
-    - |
-      REPORT=$(find / -name "dependency-check-report.json" 2>/dev/null | head -1)
-      if [ -z "$REPORT" ]; then
-        echo "❌ No se generó el reporte JSON. Revisa que dependency-check terminó correctamente."
-        exit 1
-      fi
-      echo "Reporte encontrado en: $REPORT"
-      cp "$REPORT" $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json
+    - /usr/share/dependency-check/bin/dependency-check.sh \
+      --project "DevSecOpsLab" \
+      --scan $CI_PROJECT_DIR \
+      --format JSON \
+      --prettyPrint \
+      --out $CI_PROJECT_DIR/reports
 
     - |
-      VULN_COUNT=$(jq '[
-        .dependencies[]?.vulnerabilities[]?
-        | select(.severity == "CRITICAL" or .severity == "HIGH" or .severity == "MEDIUM")
-      ] | length' $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json)
-
-      echo "Vulnerabilidades CRITICAL/HIGH/MEDIUM encontradas: $VULN_COUNT"
-
-      if [ "$VULN_COUNT" -gt 0 ]; then
-        echo ""
-        echo "🚨 ¡Se han encontrado vulnerabilidades críticas, altas o medias!"
-        echo "   Se han detectado $VULN_COUNT vulnerabilidad/es con severidad CRITICAL, HIGH o MEDIUM."
-        echo "   Revisa el artefacto 'Artifact_Desarrollo_Seguro.json' para ver el detalle."
-        echo ""
-        echo "ℹ️  Para omitir este bloqueo y probar la pipeline completa, añade"
-        echo "   'allow_failure: true' en el job 'dependency_check' del fichero .gitlab-ci.yml."
-        exit 1
+      if [ -f "$CI_PROJECT_DIR/reports/dependency-check-report.json" ]; then
+        mv $CI_PROJECT_DIR/reports/dependency-check-report.json $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json
       else
-        echo "✅ No se han detectado vulnerabilidades críticas, altas o medias. Pipeline desbloqueada."
+        echo '{"tool":"DependencyCheck","status":"report_generated_but_empty"}' > $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json
+      fi
+
+    - |
+      if grep -qiE '"severity"\s*:\s*"(CRITICAL|HIGH|MEDIUM)"' "$CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json"; then
+        echo "¡Se han encontrado vulnerabilidades críticas, altas o medias!"
+        exit 1
       fi
 
   artifacts:
+    when: always
     paths:
       - Artifact_Desarrollo_Seguro.json

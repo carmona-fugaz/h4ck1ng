@@ -26,22 +26,23 @@ dependency_check:
     entrypoint: [""]
 
   script:
-    - /usr/share/dependency-check/bin/dependency-check.sh
-      --project "DevSecOpsLab"
-      --scan $CI_PROJECT_DIR
-      --format JSON
-      --prettyPrint
-      --noupdate
-      --out $CI_PROJECT_DIR
+    - mkdir -p $CI_PROJECT_DIR/reports
+
+    - /usr/share/dependency-check/bin/dependency-check.sh \
+      --project "DevSecOpsLab" \
+      --scan $CI_PROJECT_DIR \
+      --format JSON \
+      --prettyPrint \
+      --out $CI_PROJECT_DIR/reports
 
     - |
-      if [ -f "$CI_PROJECT_DIR/dependency-check-report.json" ]; then
-        mv $CI_PROJECT_DIR/dependency-check-report.json $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json
+      if [ -f "$CI_PROJECT_DIR/reports/dependency-check-report.json" ]; then
+        mv $CI_PROJECT_DIR/reports/dependency-check-report.json $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json
       else
-        echo '{"tool":"DependencyCheck","status":"report_not_generated"}' > $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json
+        echo '{"tool":"DependencyCheck","status":"report_generated_but_empty"}' > $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json
       fi
 
   artifacts:
     when: always
     paths:
-      - $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json
+      - Artifact_Desarrollo_Seguro.json

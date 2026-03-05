@@ -32,7 +32,7 @@ dependency_check:
     - dependency-check.sh
       --project "H4ck1ng"
       --scan .
-      --format JSON
+      -f JSON
       --out .
     - mv dependency-check-report.json Artifact_Desarrollo_Seguro.json
 

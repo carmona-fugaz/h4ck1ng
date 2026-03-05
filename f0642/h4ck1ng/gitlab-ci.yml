@@ -10,6 +10,7 @@ sonarcloud_scan:
 
   script:
     # Ejecutar el análisis de SonarCloud
+    - apt-get update && apt-get install -y jq
     - sonar-scanner -Dsonar.login=$SONAR_TOKEN -Dsonar.host.url=$SONAR_HOST_URL
 
     # Generar artifact básico con estado inicial
@@ -47,6 +48,7 @@ dependency_check:
     entrypoint: [""]
 
   script:
+    - apt-get update && apt-get install -y jq
     - mkdir -p $CI_PROJECT_DIR/reports
 
     - /usr/share/dependency-check/bin/dependency-check.sh \

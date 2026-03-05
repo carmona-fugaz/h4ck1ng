@@ -28,6 +28,7 @@ dependency_check:
      --scan .
      --format JSON
      --out .
+     --ls -R
 
    - mv dependency-check-report.json Artifact_Desarrollo_Seguro.json
 

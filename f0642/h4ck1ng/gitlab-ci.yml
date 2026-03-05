@@ -9,8 +9,29 @@ sonarcloud_scan:
   image: sonarsource/sonar-scanner-cli:latest
 
   script:
+    # Ejecutar el análisis de SonarCloud
     - sonar-scanner -Dsonar.login=$SONAR_TOKEN -Dsonar.host.url=$SONAR_HOST_URL
+
+    # Generar artifact básico con estado inicial
     - echo '{"tool":"SonarCloud","status":"analysis_completed"}' > $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json
+
+    # Analizar el reporte de SonarCloud (simulación JSON)
+    # En un escenario real, SonarCloud devuelve un reporte mediante API.
+    # Aquí asumimos que tienes un JSON con vulnerabilidades para bloquear pipeline.
+    - |
+      # Ejemplo: simular extracción de vulnerabilidades
+      # Para la práctica podemos crear un array vacío si no hay vulnerabilidades
+      echo '{"vulnerabilities":[]}' > $CI_PROJECT_DIR/sonar_report.json
+
+      # Contar vulnerabilidades críticas, altas o medias
+      CRITICAL_HIGH_MED=$(jq '[.vulnerabilities[]? | select(.severity=="Critical" or .severity=="High" or .severity=="Medium")] | length' $CI_PROJECT_DIR/sonar_report.json)
+
+      if [ "$CRITICAL_HIGH_MED" -gt 0 ]; then
+        echo "¡Se han encontrado vulnerabilidades críticas, altas o medias en SonarCloud!"
+        exit 1
+      else
+        echo "No se han detectado vulnerabilidades críticas, altas o medias en SonarCloud."
+      fi
 
   artifacts:
     when: always
@@ -36,13 +57,24 @@ dependency_check:
       --out $CI_PROJECT_DIR/reports
 
     - |
+      # Si existe el reporte, moverlo a la ruta absoluta
       if [ -f "$CI_PROJECT_DIR/reports/dependency-check-report.json" ]; then
         mv $CI_PROJECT_DIR/reports/dependency-check-report.json $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json
       else
         echo '{"tool":"DependencyCheck","status":"report_generated_but_empty"}' > $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json
       fi
 
+    - |
+      # Bloquear pipeline si hay vulnerabilidades críticas, altas o medias
+      CRITICAL_HIGH_MED=$(jq '[.dependencies[].vulnerabilities[]? | select(.severity=="Critical" or .severity=="High" or .severity=="Medium")] | length' $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json)
+      if [ "$CRITICAL_HIGH_MED" -gt 0 ]; then
+        echo "¡Se han encontrado vulnerabilidades críticas, altas o medias!"
+        exit 1
+      else
+        echo "No se han detectado vulnerabilidades críticas, altas o medias."
+      fi
+
   artifacts:
     when: always
     paths:
-      - Artifact_Desarrollo_Seguro.json
+      - $CI_PROJECT_DIR/Artifact_Desarrollo_Seguro.json

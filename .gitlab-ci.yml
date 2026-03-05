@@ -31,9 +31,9 @@ dependency_check:
     # Ejecutar el análisis de dependencias
     - dependency-check.sh
       --project "H4ck1ng"
-      --scan .
+      -s .
       -f JSON
-      --out .
+      -o .
     - mv dependency-check-report.json Artifact_Desarrollo_Seguro.json
 
     # Contar vulnerabilidades de severidad CRITICAL, HIGH o MEDIUM

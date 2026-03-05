@@ -29,7 +29,7 @@ dependency_check:
     - /usr/share/dependency-check/bin/dependency-check.sh --project "H4ck1ng" --scan $CI_PROJECT_DIR --format JSON --out $CI_PROJECT_DIR
 
     # Localizar el reporte generado para depurar si no aparece donde se espera
-    - echo "=== Buscando dependency-check-report.json en todo el sistema ===" && find / -name "dependency-check-report.json" 2>/dev/null || echo "AVISO: No se encontró el fichero"
+    - echo "=== Buscando dependency-check-report.json en todo el sistema ===" && find / -name "dependency-check-report.json" 2>/dev/null || echo "AVISO':' No se encontró el fichero"
 
     # Listar el contenido del directorio de trabajo para confirmar qué hay
     - echo "=== Contenido de CI_PROJECT_DIR ===" && ls -la $CI_PROJECT_DIR

@@ -1,8 +1,0 @@
-{
-    "vulnerability": "Private Key Exposure",
-    "severity": "High",
-    "description": "Una clave privada fue detectada dentro del repositorio.",
-    "risk": "Un atacante podría usarla para autenticarse en servidores.",
-    "recommendation": "Eliminar la clave del repositorio y regenerarla.",
-    "example_fix": "Usar un gestor de secretos para almacenar claves privadas."
-}

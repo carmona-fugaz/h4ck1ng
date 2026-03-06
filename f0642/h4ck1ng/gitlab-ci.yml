@@ -75,27 +75,15 @@ dependency_check:
       - Artifact_Desarrollo_Seguro.json
 
 secret_detection:
-  stage: secrets
-# Quitar el hashtag para probar todo el pipeline aunque existan vulnerabilidades
-# allow_failure: true
-  script:
-    - echo "Analizando secretos..."
 
-    - if [ -f gl-secret-detection-report.json ]; then
-        cp gl-secret-detection-report.json Artifact_Desarrollo_Seguro.json;
-      else
-        echo "{}" > Artifact_Desarrollo_Seguro.json;
-      fi
+ stage: secrets
 
-    - |
-      if grep -E '"severity":"(Critical|High|Medium)"' Artifact_Desarrollo_Seguro.json; then
-        echo "¡Se han encontrado vulnerabilidades críticas, altas o medias!"
-        exit 1
-      else
-        echo "✅ No hay ninguna vulnerabilidad"
-      fi
+ artifacts:
+  name: "Artifact_Desarrollo_Seguro"
+  paths:
+   - gl-secret-detection-report.json
+  reports:
+   secret_detection: gl-secret-detection-report.json
 
-  artifacts:
-    paths:
-    - Artifact_Desarrollo_Seguro.json
-    when: always
+ # Quitar el hashtag para probar todo el pipeline aunque existan vulnerabilidades
+ # allow_failure: true

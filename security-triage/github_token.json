@@ -1,8 +1,0 @@
-{
-    "vulnerability": "GitHub Token Exposure",
-    "severity": "High",
-    "description": "Un token de acceso de GitHub se encuentra expuesto en el código.",
-    "risk": "Permite acceso al repositorio o acciones automatizadas maliciosas.",
-    "recommendation": "Revocar el token y usar variables protegidas.",
-    "example_fix": "Configurar el token como variable protegida en CI/CD."
-}

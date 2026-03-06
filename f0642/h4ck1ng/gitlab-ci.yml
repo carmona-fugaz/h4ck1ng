@@ -75,12 +75,16 @@ dependency_check:
       - Artifact_Desarrollo_Seguro.json
 
 secret_detection:
-  stage: secrets
 
-  script:
-    - mv gl-secret-detection-report.json Artifact_Desarrollo_Seguro.json
+ stage: secrets
+ script:
+   - mv gl-secret-detection-report.json Artifact_Desarrollo_Seguro.json
+ artifacts:
+  name: "Artifact_Desarrollo_Seguro"
+  paths:
+   - Artifact_Desarrollo_Seguro.json
+  reports:
+   secret_detection: Artifact_Desarrollo_Seguro.json
 
-  artifacts:
-    name: "Artifact_Desarrollo_Seguro"
-    paths:
-      - Artifact_Desarrollo_Seguro.json
+ # Quitar el hashtag para probar todo el pipeline aunque existan vulnerabilidades.
+ # allow_failure: true

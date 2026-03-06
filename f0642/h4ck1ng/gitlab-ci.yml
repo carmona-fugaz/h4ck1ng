@@ -83,7 +83,7 @@ secret_detection:
   paths:
    - gl-secret-detection-report.json
   reports:
-   secret_detection: gl-secret-detection-report.json
+   secret_detection: Artifact_Desarrollo_Seguro.json
 
  # Quitar el hashtag para probar todo el pipeline aunque existan vulnerabilidades.
  # allow_failure: true

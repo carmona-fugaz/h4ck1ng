@@ -112,3 +112,5 @@ sca_vulnerability_check:
       else
         echo "✅ No hay ninguna vulnerabilidad"
       fi
+#  Quitar el hashtag para probar todo el pipeline aunque existan vulnerabilidades
+#  allow_failure: true

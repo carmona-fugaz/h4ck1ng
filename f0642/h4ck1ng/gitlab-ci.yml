@@ -116,7 +116,7 @@ dependency_scanning:
 sca_vulnerability_check:
   stage: security
   image: alpine:latest
-  optional:
+  needs:optional
     - job: dependency_scanning
       artifacts: true
   allow_failure: true

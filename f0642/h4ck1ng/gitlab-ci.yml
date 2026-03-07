@@ -90,15 +90,3 @@ secret_detection:
 
  # Quitar el hashtag para probar todo el pipeline aunque existan vulnerabilidades.
   allow_failure: true
-
-dependency_scanning:
-  extends: .dependency-scanning
-  stage: sca
-  after_script:
-    - echo "Copiando reporte SCA..."
-    - |
-      if [ -f gl-dependency-scanning-report.json ]; then
-        cp gl-dependency-scanning-report.json Artifact_Desarrollo_Seguro.json
-      else
-        echo '{"tool":"DependencyScanning","status":"no_report"}' > Artifact_Desarrollo_Seguro.json
-      fi

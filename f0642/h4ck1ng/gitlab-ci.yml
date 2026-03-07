@@ -6,6 +6,7 @@ stages:
   - build
   - secrets
   - test
+  - sca
   - security
   - quality
 

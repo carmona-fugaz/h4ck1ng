@@ -90,3 +90,23 @@ secret_detection:
 
  # Quitar el hashtag para probar todo el pipeline aunque existan vulnerabilidades.
   allow_failure: true
+
+sca_vulnerability_check:
+  stage: sca
+  needs:
+    - job: dependency_scanning
+      artifacts: true
+  image: alpine:latest
+  script:
+    - |
+      if [ ! -f Artifact_Desarrollo_Seguro.json ]; then
+        echo "⚠️ No se encontró el artefacto SCA"
+        exit 1
+      fi
+    - |
+      if grep -qiE '"severity"\s*:\s*"(critical|high|medium)"' Artifact_Desarrollo_Seguro.json; then
+        echo "¡Se han encontrado vulnerabilidades críticas, altas o medias!"
+        exit 1
+      else
+        echo "✅ No hay ninguna vulnerabilidad"
+      fi

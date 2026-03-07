@@ -99,7 +99,6 @@ sca_vulnerability_check:
     - dependency_scanning
   script:
     - |
-      # Copiar artefacto a tu nombre unificado
       if [ -f gl-dependency-scanning-report.json ]; then
         cp gl-dependency-scanning-report.json Artifact_Desarrollo_Seguro.json
       else

@@ -93,17 +93,39 @@ secret_detection:
 
 dependency_scanning:
   stage: sca
-
+  # ✅ FIX: NO se sobreescribe `script`, la plantilla ejecuta el escaneo
+  # Solo se añade after_script para copiar el reporte
   after_script:
-    - echo "Procesando resultados de SCA..."
-
+    - echo "Copiando reporte SCA..."
     - |
       if [ -f gl-dependency-scanning-report.json ]; then
         cp gl-dependency-scanning-report.json Artifact_Desarrollo_Seguro.json
       else
-        echo "{}" > Artifact_Desarrollo_Seguro.json
+        echo '{"tool":"DependencyScanning","status":"no_report"}' > Artifact_Desarrollo_Seguro.json
       fi
+  artifacts:
+    when: always
+    paths:
+      - Artifact_Desarrollo_Seguro.json
+    reports:
+      dependency_scanning: gl-dependency-scanning-report.json
 
+
+# ─── SCA Check: job separado para evaluar vulnerabilidades ────
+# ✅ FIX: la lógica de fallo se separa porque after_script ignora exit codes
+sca_vulnerability_check:
+  stage: security
+  image: alpine:latest
+  needs:
+    - job: dependency_scanning
+      artifacts: true
+  allow_failure: true
+  script:
+    - |
+      if [ ! -f Artifact_Desarrollo_Seguro.json ]; then
+        echo "⚠️ No se encontró el artefacto SCA"
+        exit 1
+      fi
     - |
       if grep -qiE '"severity"\s*:\s*"(critical|high|medium)"' Artifact_Desarrollo_Seguro.json; then
         echo "¡Se han encontrado vulnerabilidades críticas, altas o medias!"
@@ -111,11 +133,3 @@ dependency_scanning:
       else
         echo "✅ No hay ninguna vulnerabilidad"
       fi
-
-  artifacts:
-    when: always
-    paths:
-      - Artifact_Desarrollo_Seguro.json
-
-  # Quitar el hashtag para probar todo el pipeline aunque existan vulnerabilidades
-  # allow_failure: true

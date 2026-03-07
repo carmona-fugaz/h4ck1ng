@@ -1,10 +1,14 @@
-const mysql = require('mysql');
+const express = require("express");
+const mysql = require("mysql");
+
+const app = express();
 const connection = mysql.createConnection({});
 
-function getUser(username) {
+app.get("/user", (req, res) => {
+  const username = req.query.username;
+
   const query = "SELECT * FROM users WHERE username = '" + username + "'";
-  connection.query(query, function(err, results) {
-    if (err) throw err;
-    console.log(results);
+  connection.query(query, (err, result) => {
+    res.send(result);
   });
-}
+});

@@ -1,7 +1,11 @@
+const express = require("express");
 const { exec } = require("child_process");
 
-function runCommand(userInput) {
-  exec("ls " + userInput, (error, stdout, stderr) => {
-    console.log(stdout);
+const app = express();
+
+app.get("/ping", (req, res) => {
+  const host = req.query.host;
+  exec("ping " + host, (err, stdout) => {
+    res.send(stdout);
   });
-}
+});

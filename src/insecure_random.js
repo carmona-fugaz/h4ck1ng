@@ -1,3 +1,5 @@
-function generateToken() {
-    return Math.random().toString(36).substring(2);
-  }
+const API_KEY = "AIzaSyA-VERY-SECRET-KEY";
+
+function connect() {
+  console.log(API_KEY);
+}

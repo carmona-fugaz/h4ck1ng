@@ -1,6 +1,10 @@
-const password = "SuperSecret123";
-const username = "admin";
+const express = require("express");
+const fs = require("fs");
 
-function connect() {
-  console.log("Connecting with", username, password);
-}
+const app = express();
+
+app.get("/file", (req, res) => {
+  const filename = req.query.name;
+  const data = fs.readFileSync("./files/" + filename);
+  res.send(data);
+});

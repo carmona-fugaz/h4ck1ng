@@ -3,6 +3,7 @@ include:
   - template: Security/Dependency-Scanning.gitlab-ci.yml
 
 stages:
+  - build
   - secrets
   - sca
   - security
@@ -90,7 +91,7 @@ secret_detection:
  # Quitar el hashtag para probar todo el pipeline aunque existan vulnerabilidades.
   allow_failure: true
 
-dependency_scanning:
+dependency-scanning:
   stage: sca
 
   after_script:

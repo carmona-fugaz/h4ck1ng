@@ -90,23 +90,21 @@ secret_detection:
  # Quitar el hashtag para probar todo el pipeline aunque existan vulnerabilidades.
   allow_failure: true
 
-sca_result_check:
+dependency-scanning:
 
  stage: sca
 
- needs:
-  - dependency_scanning
-
  script:
-  - echo "Procesando reporte de SCA..."
+  - echo "Analizando dependencias..."
 
-  - |
-    if [ -f gl-dependency-scanning-report.json ]; then
-      cp gl-dependency-scanning-report.json Artifact_Desarrollo_Seguro.json
+  # Copiar el reporte generado por GitLab al artifact obligatorio
+  - if [ -f gl-dependency-scanning-report.json ]; then
+      cp gl-dependency-scanning-report.json Artifact_Desarrollo_Seguro.json;
     else
-      echo "{}" > Artifact_Desarrollo_Seguro.json
+      echo "{}" > Artifact_Desarrollo_Seguro.json;
     fi
 
+  # Bloquear pipeline si hay vulnerabilidades críticas, altas o medias
   - |
     if grep -E '"severity":"(Critical|High|Medium)"' Artifact_Desarrollo_Seguro.json; then
       echo "¡Se han encontrado vulnerabilidades críticas, altas o medias!"
@@ -121,4 +119,4 @@ sca_result_check:
   when: always
 
  #  Quitar el hashtag para probar todo el pipeline aunque existan vulnerabilidades
- #  allow_failure: true
+ # allow_failure: true

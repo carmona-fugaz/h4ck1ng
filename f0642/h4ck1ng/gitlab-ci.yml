@@ -3,11 +3,11 @@ include:
   - template: Security/Dependency-Scanning.gitlab-ci.yml
 
 stages:
-  - build
-  - security
-  - quality
   - secrets
   - sca
+  - security
+  - quality
+
 
 # Job del SonarCloud.
 sonarcloud_scan:
@@ -91,7 +91,6 @@ secret_detection:
   allow_failure: true
 
 dependency_scanning:
-  extends: .dependency-scanning
   stage: sca
 
   after_script:

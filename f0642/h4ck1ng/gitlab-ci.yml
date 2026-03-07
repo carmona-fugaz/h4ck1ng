@@ -100,7 +100,12 @@ sca_result_check:
  script:
   - echo "Procesando reporte de SCA..."
 
-  - cp gl-dependency-scanning-report.json Artifact_Desarrollo_Seguro.json || echo "{}" > Artifact_Desarrollo_Seguro.json
+  - |
+    if [ -f gl-dependency-scanning-report.json ]; then
+      cp gl-dependency-scanning-report.json Artifact_Desarrollo_Seguro.json
+    else
+      echo "{}" > Artifact_Desarrollo_Seguro.json
+    fi
 
   - |
     if grep -E '"severity":"(Critical|High|Medium)"' Artifact_Desarrollo_Seguro.json; then

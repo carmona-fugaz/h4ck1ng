@@ -1,7 +1,15 @@
+const express = require("express");
 const crypto = require("crypto");
 
-function hash(password) {
-  return crypto.createHash("md5").update(password).digest("hex");
-}
+const app = express();
 
-module.exports = hash;
+app.get("/hash", (req, res) => {
+  const password = req.query.password;
+
+  // Uso inseguro de MD5 para contraseñas
+  const hash = crypto.createHash("md5").update(password).digest("hex");
+
+  res.send(hash);
+});
+
+app.listen(3000);

@@ -1,5 +1,12 @@
-const API_KEY = "AIzaSyA-VERY-SECRET-KEY";
+const express = require("express");
 
-function connect() {
-  console.log(API_KEY);
-}
+const app = express();
+
+app.get("/token", (req, res) => {
+  // Token de sesión generado con Math.random()
+  const token = Math.random().toString(36).substring(2);
+
+  res.send("Session token: " + token);
+});
+
+app.listen(3000);

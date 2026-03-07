@@ -91,7 +91,7 @@ secret_detection:
  # Quitar el hashtag para probar todo el pipeline aunque existan vulnerabilidades.
   allow_failure: true
 
-dependency-scanning:
+dependency_scanning:
   stage: sca
 
   after_script:

@@ -95,6 +95,7 @@ secret_detection:
 sca_vulnerability_check:
   stage: sca
   needs:
+    - optional: true
     - job: dependency_scanning
       artifacts: true
   image: alpine:latest

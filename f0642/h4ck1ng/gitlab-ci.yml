@@ -155,36 +155,46 @@ snyk_sast:
   before_script:
     - npm install -g snyk
     - npm install
-    # Configura el token explícitamente (por si acaso)
-    - snyk config set api=$SNYK_TOKEN
+    # 1. Verificar que el token no está vacío
+    - |
+      if [ -z "$SNYK_TOKEN" ]; then
+        echo "❌ ERROR: La variable SNYK_TOKEN no está definida o está vacía."
+        echo '{"ok":false,"error":"SNYK_TOKEN no definida"}' > Artifact_Desarrollo_Seguro.json
+        exit 1
+      else
+        echo "✅ SNYK_TOKEN tiene longitud: ${#SNYK_TOKEN}"
+      fi
+    # 2. Configurar el token explícitamente
+    - snyk config set api="$SNYK_TOKEN"
+    # 3. Verificar autenticación con whoami
+    - |
+      if snyk whoami > /dev/null 2>&1; then
+        echo "✅ Autenticación correcta. Usuario: $(snyk whoami)"
+      else
+        echo "❌ Error de autenticación. El token no es válido o no tiene permisos."
+        echo '{"ok":false,"error":"Token inválido o sin permisos"}' > Artifact_Desarrollo_Seguro.json
+        exit 1
+      fi
   script:
-    # Ejecuta Snyk y guarda el JSON (stdout) en el archivo
+    # 4. Ejecutar el análisis y generar JSON
     - snyk test --severity-threshold=medium --json > Artifact_Desarrollo_Seguro.json
     - snyk_exit_code=$?
-
-    # Muestra las primeras líneas del JSON para depuración (útil para ver errores)
+    # 5. Mostrar las primeras líneas del JSON (útil para logs)
     - head -20 Artifact_Desarrollo_Seguro.json
-
-    # Analiza el código de salida y muestra mensajes claros
+    # 6. Evaluar el código de salida
     - |
       if [ $snyk_exit_code -eq 0 ]; then
         echo "✅ No se encontraron vulnerabilidades críticas, altas o medias."
       elif [ $snyk_exit_code -eq 1 ]; then
-        echo "❌ ¡Se han encontrado vulnerabilidades críticas, altas o medias! Pipeline detenida (o no, según allow_failure)."
-        # Si quieres que el pipeline se detenga, usa exit 1. Si allow_failure=true, el pipeline continúa igualmente.
-        exit 1
+        echo "❌ Se encontraron vulnerabilidades críticas, altas o medias. Revisa el artifact."
+        exit 1   # Cambia a 0 si no quieres que falle el pipeline (junto con allow_failure)
       else
-        echo "⚠️ Error en la ejecución de Snyk (código $snyk_exit_code). Posible problema de autenticación, red o configuración."
-        # Muestra el error contenido en el JSON (si existe)
-        if grep -q '"error"' Artifact_Desarrollo_Seguro.json; then
-          echo "📄 Mensaje de error del JSON:"
-          grep -o '"error":"[^"]*"' Artifact_Desarrollo_Seguro.json
-        fi
+        echo "⚠️ Error en la ejecución de Snyk (código $snyk_exit_code)."
         exit $snyk_exit_code
       fi
   artifacts:
     paths:
       - Artifact_Desarrollo_Seguro.json
-    when: always 
+    when: always
   # Quitar el hashtag para probar todo el pipeline aunque existan vulnerabilidades.
-  # allow_failure: true
+  allow_failure: true

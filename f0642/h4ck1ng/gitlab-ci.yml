@@ -155,46 +155,16 @@ snyk_sast:
   before_script:
     - npm install -g snyk
     - npm install
-    # 1. Verificar que el token no está vacío
-    - |
-      if [ -z "$SNYK_TOKEN" ]; then
-        echo "❌ ERROR: La variable SNYK_TOKEN no está definida o está vacía."
-        echo '{"ok":false,"error":"SNYK_TOKEN no definida"}' > Artifact_Desarrollo_Seguro.json
-        exit 1
-      else
-        echo "✅ SNYK_TOKEN tiene longitud: ${#SNYK_TOKEN}"
-      fi
-    # 2. Configurar el token explícitamente
-    - snyk config set api="$SNYK_TOKEN"
-    # 3. Verificar autenticación con whoami
-    - |
-      if snyk whoami > /dev/null 2>&1; then
-        echo "✅ Autenticación correcta. Usuario: $(snyk whoami)"
-      else
-        echo "❌ Error de autenticación. El token no es válido o no tiene permisos."
-        echo '{"ok":false,"error":"Token inválido o sin permisos"}' > Artifact_Desarrollo_Seguro.json
-        exit 1
-      fi
   script:
-    # 4. Ejecutar el análisis y generar JSON
+    # Ejecuta Snyk y guarda la salida (éxito o error) en el artifact
     - snyk test --severity-threshold=medium --json > Artifact_Desarrollo_Seguro.json
     - snyk_exit_code=$?
-    # 5. Mostrar las primeras líneas del JSON (útil para logs)
+    # Muestra las primeras líneas del JSON en el log (útil para depuración)
     - head -20 Artifact_Desarrollo_Seguro.json
-    # 6. Evaluar el código de salida
-    - |
-      if [ $snyk_exit_code -eq 0 ]; then
-        echo "✅ No se encontraron vulnerabilidades críticas, altas o medias."
-      elif [ $snyk_exit_code -eq 1 ]; then
-        echo "❌ Se encontraron vulnerabilidades críticas, altas o medias. Revisa el artifact."
-        exit 1   # Cambia a 0 si no quieres que falle el pipeline (junto con allow_failure)
-      else
-        echo "⚠️ Error en la ejecución de Snyk (código $snyk_exit_code)."
-        exit $snyk_exit_code
-      fi
+    # El job fallará si snyk devuelve código distinto de cero, pero el artifact se guarda igual
+    - exit $snyk_exit_code
   artifacts:
     paths:
       - Artifact_Desarrollo_Seguro.json
-    when: always
-  # Quitar el hashtag para probar todo el pipeline aunque existan vulnerabilidades.
-  allow_failure: true
+    when: always                # El artifact se sube incluso si el job falla
+  allow_failure: true  

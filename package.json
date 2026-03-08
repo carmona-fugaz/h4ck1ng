@@ -1,0 +1,11 @@
+{
+    "name": "h4ck1ng",
+    "version": "1.0.0",
+    "description": "Proyecto de pruebas de seguridad",
+    "main": "src/index.js",
+    "scripts": {
+      "start": "node src/index.js"
+    },
+    "dependencies": {},
+    "devDependencies": {}
+  }

@@ -164,9 +164,6 @@ snyk_sast:
         snyk_exit_code=$?
       fi
 
-    # Muestra el contenido del reporte (opcional, útil para depuración)
-    - cat snyk-report.json
-
     # Analiza el código de salida y muestra el mensaje correspondiente
     - |
       if [ $snyk_exit_code -eq 0 ]; then

@@ -181,10 +181,10 @@ snyk_sast:
   allow_failure: true
 
 variables:
-  # URL pública de ngrok definida en CI/CD variables
+  # URL pública de DVWA expuesta con ngrok
   DAST_WEBSITE: "$NGROK_URL/dvwa"
 
-  # Configuración de autenticación DVWA
+  # Autenticación DVWA
   DAST_AUTH_URL: "$NGROK_URL/dvwa/login.php"
   DAST_AUTH_USERNAME: "admin"
   DAST_AUTH_PASSWORD: "password"
@@ -193,7 +193,6 @@ variables:
   DAST_AUTH_PASSWORD_FIELD: "password"
   DAST_AUTH_SUBMIT_FIELD: "Login"
 
-  # Detectar sesión autenticada
   DAST_AUTH_SUCCESS_IF_NO_LOGOUT: "true"
 
   # Variable para permitir omitir el bloqueo

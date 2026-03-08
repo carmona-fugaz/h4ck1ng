@@ -194,7 +194,7 @@ dast:
     DAST_FULL_SCAN_ENABLED: "true"
     DAST_REQUEST_HEADERS: "ngrok-skip-browser-warning: true"
     # Aumentar profundidad de rastreo
-    DAST_CRAWL_DEPTH: 10
+    DAST_CRAWL_DEPTH: "10"
     # Opcional: proporcionar sitemap para ayudar al descubrimiento
     DAST_SITEMAP_URL: "$NGROK_URL/dvwa/sitemap.xml"
     OMIT_SECURITY_GATE: "false"

@@ -152,18 +152,22 @@ snyk_sast:
   image: node:18
   variables:
     SNYK_TOKEN: $SNYK_TOKEN  # GitLab CI variable protegida
-  before_script:
+    before_script:
     - npm install -g snyk
-    - npm install                     # Instala dependencias del proyecto
+    - npm install
   script:
-    # Ejecuta Snyk y guarda el reporte JSON, capturando el código de salida
-    - snyk test --severity-threshold=medium --json > snyk-report.json
-    - snyk_exit_code=$?
+    # Ejecuta Snyk y captura el código de salida sin detener el script
+    - |
+      if snyk test --severity-threshold=medium --json > snyk-report.json; then
+        snyk_exit_code=0
+      else
+        snyk_exit_code=$?
+      fi
 
     # Muestra el contenido del reporte (opcional, útil para depuración)
     - cat snyk-report.json
 
-    # Analiza el código de salida
+    # Analiza el código de salida y muestra el mensaje correspondiente
     - |
       if [ $snyk_exit_code -eq 0 ]; then
         echo "✅ No se encontraron vulnerabilidades críticas, altas o medias."

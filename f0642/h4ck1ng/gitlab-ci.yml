@@ -193,7 +193,7 @@ artifact_export:
     expire_in: 1 week
 
 dast:
-  stage: onlinescan
+  stage: dast
   variables:
     DAST_TARGET_URL: "$NGROK_URL/dvwa/"
     DAST_AUTH_URL: "NGROK_URL/dvwa/login.php"

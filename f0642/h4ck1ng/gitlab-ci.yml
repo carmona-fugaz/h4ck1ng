@@ -155,7 +155,6 @@ snyk_sast:
   before_script:
     - npm install -g snyk
     - npm install
-    - echo "🔍 Verificando variable SNYK_TOKEN: ${SNYK_TOKEN:+definida}"
   script:
     # Configurar token explícitamente
     - snyk config set api=$SNYK_TOKEN

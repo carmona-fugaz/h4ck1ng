@@ -153,7 +153,6 @@ snyk_sast:
   variables:
     SNYK_TOKEN: $SNYK_TOKEN  # GitLab CI variable protegida
   script:
-    - npm ci 
     - npm install -g snyk
     - snyk test --severity-threshold=medium --json > Artifact_Desarrollo_Seguro.json || true
   artifacts:

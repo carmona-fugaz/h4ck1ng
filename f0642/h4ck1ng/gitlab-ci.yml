@@ -178,5 +178,5 @@ snyk_sast:
   artifacts:
     paths:
       - Artifact_Desarrollo_Seguro.json
-  # Quitar el hashtag para probar todo el pipeline aunque existan vulnerabilidades
+  # Quitar el hashtag para probar todo el pipeline aunque existan vulnerabilidades.
   # allow_failure: true

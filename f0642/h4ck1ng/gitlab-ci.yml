@@ -156,15 +156,14 @@ snyk_sast:
     - npm install -g snyk
     - npm install
   script:
-    # Ejecuta Snyk y captura el código de salida sin detener el script
-    - |
-      if snyk test --severity-threshold=medium --json > snyk-report.json; then
-        snyk_exit_code=0
-      else
-        snyk_exit_code=1
-      fi
+    # 1. Ejecuta Snyk y guarda el reporte JSON (nombre consistente)
+    - snyk test --severity-threshold=medium --json > Artifact_Desarrollo_Seguro.json
+    - snyk_exit_code=$?
 
-    # Analiza el código de salida y muestra el mensaje correspondiente
+    # 2. (Opcional) Muestra el contenido del JSON para depuración
+    - cat Artifact_Desarrollo_Seguro.json
+
+    # 3. Evalúa el código de salida y muestra mensajes claros
     - |
       if [ $snyk_exit_code -eq 0 ]; then
         echo "✅ No se encontraron vulnerabilidades críticas, altas o medias."
@@ -178,5 +177,6 @@ snyk_sast:
   artifacts:
     paths:
       - Artifact_Desarrollo_Seguro.json
+    when: always
   # Quitar el hashtag para probar todo el pipeline aunque existan vulnerabilidades.
   # allow_failure: true

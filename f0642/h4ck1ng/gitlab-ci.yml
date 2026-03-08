@@ -9,11 +9,11 @@ stages:
   - secrets
   - test
   - sca
-  - dast
   - sast
   - snyk
   - security
   - quality
+  - dast
 
 
 # Job del SonarCloud.
@@ -179,3 +179,24 @@ snyk_sast:
     when: always                
   # Quitar el hashtag para probar todo el pipeline aunque existan vulnerabilidades
   allow_failure: true
+
+dast_scan:
+  stage: dast
+  image: owasp/zap2docker-stable
+
+  script:
+    - mkdir resultados
+    - zap-baseline.py -t https://TU_URL_NGROK/dvwa -J resultados/Artifact_Desarrollo_Seguro.json || true
+    - cat resultados/Artifact_Desarrollo_Seguro.json
+
+    # Detectar vulnerabilidades
+    - |
+      if grep -E '"riskcode": "[2-3]"' resultados/Artifact_Desarrollo_Seguro.json; then
+        echo "¡Se han encontrado vulnerabilidades críticas, altas o medias!"
+        exit 1
+      fi
+
+  artifacts:
+    name: "Artifact_Desarrollo_Seguro"
+    paths:
+      - resultados/Artifact_Desarrollo_Seguro.json

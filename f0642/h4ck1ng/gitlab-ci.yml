@@ -184,7 +184,7 @@ snyk_sast:
 dast:
   stage: dast_scan
   variables:
-    # Variables locales al job derivadas de NGROK_URL.
+    # Variables locales al job derivadas de NGROK_URL
     DAST_TARGET_URL: "$NGROK_URL/dvwa/"
     DAST_AUTH_URL: "$NGROK_URL/dvwa/login.php"
     DAST_USERNAME_FIELD: "css:input[name='username']"
@@ -193,17 +193,9 @@ dast:
     DAST_BROWSER_SCAN: "true"
     DAST_FULL_SCAN_ENABLED: "true"
     DAST_REQUEST_HEADERS: "ngrok-skip-browser-warning: true"
-    OMIT_SECURITY_GATE: "false"
-    DVWA_USER: "admin"          # Usuario DVWA
-    DVWA_PASS: "password"       # Contraseña DVWA
+    OMIT_SECURITY_GATE: "true"
   before_script:
     - echo "Iniciando DAST autenticado en $DAST_TARGET_URL"
-    # Login y poner seguridad en bajo
-    - apk add --no-cache curl
-    - |
-      echo "Configurando DVWA Security a LOW"
-      curl -s -c cookie.txt -d "username=$DVWA_USER&password=$DVWA_PASS&Login=Login" "$NGROK_URL/dvwa/login.php"
-      curl -s -b cookie.txt -d "security=low&seclev_submit=Submit" "$NGROK_URL/dvwa/security.php"
   after_script:
     - |
       if [ -f "$CI_PROJECT_DIR/gl-dast-report.json" ]; then

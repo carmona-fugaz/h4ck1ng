@@ -155,27 +155,33 @@ snyk_sast:
   before_script:
     - npm install -g snyk
     - npm install
+    - echo "🔍 Verificando variable SNYK_TOKEN: ${SNYK_TOKEN:+definida}"
   script:
+    # Configurar token explícitamente
+    - snyk config set api=$SNYK_TOKEN
+    # Ejecutar Snyk y guardar JSON
     - snyk test --severity-threshold=medium --json > Artifact_Desarrollo_Seguro.json
     - snyk_exit_code=$?
+    # Mostrar las primeras líneas del JSON para depuración
     - head -20 Artifact_Desarrollo_Seguro.json
+    # Evaluar resultado
     - |
       if [ $snyk_exit_code -eq 0 ]; then
         echo "✅ No se encontraron vulnerabilidades."
       elif [ $snyk_exit_code -eq 1 ]; then
-        echo "❌ Vulnerabilidades encontradas (consulta el artifact)."
-        exit 1   # El job falla, pero allow_failure permite que el pipeline continúe
+        echo "❌ Vulnerabilidades encontradas. Revisa el artifact."
+        exit 1
       else
-        echo "⚠️ Error en Snyk (código $snyk_exit_code)."
+        echo "⚠️ Error en Snyk (código $snyk_exit_code). Posible problema de autenticación."
+        # Mostrar el error contenido en el JSON (si existe)
+        if grep -q '"error"' Artifact_Desarrollo_Seguro.json; then
+          echo "📄 Mensaje de error del JSON:"
+          grep -o '"error":"[^"]*"' Artifact_Desarrollo_Seguro.json
+        fi
         exit $snyk_exit_code
       fi
   artifacts:
     paths:
       - Artifact_Desarrollo_Seguro.json
-    when: always
-  artifacts:
-    paths:
-      - Artifact_Desarrollo_Seguro.json
-    when: always
   # Quitar el hashtag para probar todo el pipeline aunque existan vulnerabilidades.
-  # allow_failure: true
+  allow_failure: true

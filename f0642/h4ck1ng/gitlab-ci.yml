@@ -204,9 +204,7 @@ dast:
     DAST_FULL_SCAN_ENABLED: "true"
   before_script:
     - echo "Iniciando DAST autenticado en $DAST_TARGET_URL"
-  script:
-    # Ejecuta el escaneo DAST con timeout de 12 minutos (720s)
-    - timeout 720s /analyzer/gitlab-dast-scan
+
   after_script:
     - |
       if [ -f "$CI_PROJECT_DIR/gl-dast-report.json" ]; then

@@ -152,22 +152,26 @@ snyk_sast:
   image: node:18
   variables:
     SNYK_TOKEN: $SNYK_TOKEN  # GitLab CI variable protegida
-  script:
+  before_script:
     - npm install -g snyk
-
-    # instalar dependencias del proyecto (esto faltaba)
     - npm install
-
-    # ejecutar snyk mostrando resultados
+  script:
+    # Ejecuta Snyk y genera el reporte JSON
+    - snyk test --severity-threshold=medium --json > snyk-report.json
+    - snyk_exit_code=$?
+    # Muestra el reporte en el log (opcional)
+    - cat snyk-report.json
+    # Analiza el código de salida
     - |
-      if snyk test --severity-threshold=medium; then
-        echo "No se encontraron vulnerabilidades críticas, altas o medias."
+      if [ $snyk_exit_code -eq 0 ]; then
+        echo "✅ No se encontraron vulnerabilidades críticas, altas o medias."
+      elif [ $snyk_exit_code -eq 1 ]; then
+        echo "❌ ¡Se han encontrado vulnerabilidades críticas, altas o medias! Pipeline detenida."
+        exit 1
       else
-        echo "Se encontraron vulnerabilidades críticas, altas o medias."
+        echo "⚠️ Error en la ejecución de Snyk (código $snyk_exit_code). Revisa la autenticación o la conexión."
+        exit $snyk_exit_code
       fi
-
-    # generar artifact JSON
-    - snyk test --severity-threshold=medium --json > Artifact_Desarrollo_Seguro.json
   artifacts:
     paths:
       - Artifact_Desarrollo_Seguro.json

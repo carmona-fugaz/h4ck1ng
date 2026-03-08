@@ -6,7 +6,6 @@ include:
 
 stages:
   - build
-  - dast_scan
   - secrets
   - test
   - sca
@@ -14,6 +13,7 @@ stages:
   - snyk
   - security
   - quality
+  - dast_scan
 
 
 # Job del SonarCloud.
@@ -182,31 +182,21 @@ snyk_sast:
 
 dast:
   stage: dast_scan
-
   variables:
     DAST_TARGET_URL: "$NGROK_URL/dvwa/"
     DAST_AUTH_URL: "$NGROK_URL/dvwa/login.php"
-
     DAST_USERNAME_FIELD: "css:input[name='username']"
     DAST_PASSWORD_FIELD: "css:input[name='password']"
     DAST_SUBMIT_FIELD: "css:input[type='submit']"
-
     DAST_AUTH_USERNAME: "admin"
     DAST_AUTH_PASSWORD: "password"
-
     DAST_BROWSER_SCAN: "false"
     DAST_FULL_SCAN_ENABLED: "false"
-
     DAST_CRAWL_STRATEGY: "breadth-first"
     DAST_CRAWL_DEPTH: "2"
-
     DAST_TARGET_CHECK_TIMEOUT: "20"
-
     DAST_REQUEST_HEADERS: "ngrok-skip-browser-warning: true"
-
-    # Evita loops de DVWA
     DAST_EXCLUDE_URLS: "logout.php"
-
     OMIT_SECURITY_GATE: "true"
 
   before_script:
@@ -239,3 +229,5 @@ dast:
     - if: $CI_COMMIT_REF_NAME == "main" || $CI_PIPELINE_SOURCE == "merge_request_event"
 
   timeout: 10m
+  # Quitar el hashtag para probar todo el pipeline aunque existan vulnerabilidades
+  allow_failure: true

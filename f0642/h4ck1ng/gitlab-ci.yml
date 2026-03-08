@@ -154,7 +154,13 @@ snyk_sast:
     SNYK_TOKEN: $SNYK_TOKEN  # GitLab CI variable protegida
   script:
     - npm install -g snyk
-    - snyk test --severity-threshold=medium --json > Artifact_Desarrollo_Seguro.json || true
+    - snyk test --severity-threshold=medium --json > Artifact_Desarrollo_Seguro.json
+    - |
+      STATUS=$?
+      if [ $STATUS -ne 0 ]; then
+        echo "¡Se han encontrado vulnerabilidades críticas, altas o medias! Pipeline detenida."
+        exit $STATUS
+      fi
   artifacts:
     paths:
       - Artifact_Desarrollo_Seguro.json

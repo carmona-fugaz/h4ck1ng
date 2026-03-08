@@ -182,9 +182,9 @@ snyk_sast:
 
 # Artifact y bloqueo en un job independiente que depende del DAST oficial
 dast:
-  stage: dast_scan
+  stage: dast
   variables:
-    # Variables locales al job derivadas de NGROK_URL.
+    # Asegurar que NGROK_URL está definida sin barra final
     DAST_TARGET_URL: "$NGROK_URL/dvwa/"
     DAST_AUTH_URL: "$NGROK_URL/dvwa/login.php"
     DAST_USERNAME_FIELD: "css:input[name='username']"
@@ -193,10 +193,80 @@ dast:
     DAST_BROWSER_SCAN: "true"
     DAST_FULL_SCAN_ENABLED: "true"
     DAST_REQUEST_HEADERS: "ngrok-skip-browser-warning: true"
-    OMIT_SECURITY_GATE: "true"
+    # Aumentar profundidad de rastreo
     DAST_CRAWL_DEPTH: 10
+    # Opcional: proporcionar sitemap para ayudar al descubrimiento
+    DAST_SITEMAP_URL: "$NGROK_URL/dvwa/sitemap.xml"
+    OMIT_SECURITY_GATE: "false"
   before_script:
-    - echo "Iniciando DAST autenticado en $DAST_TARGET_URL"
+    - apk add --no-cache curl grep sed
+    - |
+      set -x  # Modo depuración (quitar si no se desea)
+
+      LOGIN_URL="$NGROK_URL/dvwa/login.php"
+      SECURITY_URL="$NGROK_URL/dvwa/security.php"
+      INDEX_URL="$NGROK_URL/dvwa/index.php"  # Página principal tras login
+      USERNAME="admin"
+      PASSWORD="password"
+      
+      COOKIE_FILE=$(mktemp)
+      
+      # 1. Login
+      echo "🔐 Haciendo login..."
+      curl -s -L -c "$COOKIE_FILE" -b "$COOKIE_FILE" -X POST \
+        -d "username=$USERNAME&password=$PASSWORD&Login=Login" \
+        "$LOGIN_URL" > /dev/null || { echo "❌ Login falló"; exit 1; }
+      
+      # 2. Obtener token CSRF de security.php
+      echo "🔑 Obteniendo token CSRF..."
+      SECURITY_PAGE=$(curl -s -L -b "$COOKIE_FILE" -c "$COOKIE_FILE" "$SECURITY_URL")
+      TOKEN=$(echo "$SECURITY_PAGE" | grep -oP 'name="user_token" value="\K[^"]+' | head -1)
+      
+      if [ -z "$TOKEN" ]; then
+        echo "❌ No se pudo obtener el token CSRF. Abortando."
+        exit 1
+      fi
+      
+      # 3. Cambiar nivel a "low"
+      echo "⬇️ Cambiando nivel de seguridad a low..."
+      curl -s -L -b "$COOKIE_FILE" -c "$COOKIE_FILE" -X POST \
+        -d "security=low&user_token=$TOKEN&Change=Change" \
+        "$SECURITY_URL" > /dev/null || { echo "❌ Falló el POST para cambiar nivel"; exit 1; }
+      
+      # 4. Visitar la página principal para que el escáner descubra enlaces
+      echo "🌐 Visitando página principal para descubrir enlaces..."
+      curl -s -L -b "$COOKIE_FILE" -c "$COOKIE_FILE" "$INDEX_URL" > /dev/null
+      
+      # 5. Extraer cookies actualizadas
+      PHPSESSID=$(grep -E '\sPHPSESSID\s' "$COOKIE_FILE" | tail -1 | awk '{print $7}')
+      SECURITY=$(grep -E '\ssecurity\s' "$COOKIE_FILE" | tail -1 | awk '{print $7}')
+      
+      echo "🍪 Cookies: PHPSESSID=$PHPSESSID, security=$SECURITY"
+      
+      # 6. Verificar que el nivel sea "low"
+      CHECK_PAGE=$(curl -s -L -b "$COOKIE_FILE" "$SECURITY_URL")
+      if echo "$CHECK_PAGE" | grep -q '<option value="low" selected>'; then
+        echo "✅ Nivel de seguridad confirmado: low"
+      else
+        echo "❌ El nivel NO es low. Posible error."
+        echo "🔍 Contenido de security.php:"
+        echo "$CHECK_PAGE" | head -20
+        exit 1
+      fi
+      
+      # 7. Pasar cookies al escáner y deshabilitar autenticación automática
+      if [ -n "$PHPSESSID" ] && [ -n "$SECURITY" ]; then
+        export DAST_COOKIES="PHPSESSID=$PHPSESSID; security=$SECURITY"
+        export DAST_AUTH_DISABLED="true"
+        echo "🍪 Cookies configuradas para el escáner."
+      else
+        echo "❌ No se encontraron las cookies necesarias."
+        exit 1
+      fi
+      
+      rm -f "$COOKIE_FILE"
+      
+    - echo "🚀 Iniciando DAST autenticado en $DAST_TARGET_URL"
   after_script:
     - |
       if [ -f "$CI_PROJECT_DIR/gl-dast-report.json" ]; then
@@ -208,9 +278,11 @@ dast:
 
       if [ "$OMIT_SECURITY_GATE" != "true" ]; then
         apk add --no-cache jq
-        if jq '.vulnerabilities[] | select(.severity=="Critical" or .severity=="High" or .severity=="Medium")' "$CI_PROJECT_DIR/gl-dast-report.json"; then
-          echo "¡Se han encontrado vulnerabilidades críticas, altas o medias!"
+        if jq -e '.vulnerabilities[] | select(.severity=="Critical" or .severity=="High" or .severity=="Medium")' "$CI_PROJECT_DIR/gl-dast-report.json" > /dev/null; then
+          echo "❌ ¡Se han encontrado vulnerabilidades críticas, altas o medias! Pipeline detenido."
           exit 1
+        else
+          echo "✅ No se encontraron vulnerabilidades críticas, altas o medias"
         fi
       fi
   artifacts:

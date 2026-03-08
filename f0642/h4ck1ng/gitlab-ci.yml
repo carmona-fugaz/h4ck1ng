@@ -196,6 +196,7 @@ dast:
     DAST_REQUEST_HEADERS: "ngrok-skip-browser-warning: true"
     OMIT_SECURITY_GATE: "true"
     DAST_CRAWL_DEPTH: 5
+    DAST_TARGET_CHECK_TIMEOUT: 20
   before_script:
     - echo "Iniciando DAST autenticado en $DAST_TARGET_URL"
 

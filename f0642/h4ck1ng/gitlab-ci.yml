@@ -180,23 +180,52 @@ snyk_sast:
   # Quitar el hashtag para probar todo el pipeline aunque existan vulnerabilidades
   allow_failure: true
 
-dast_scan:
+variables:
+  # URL pública de ngrok definida en CI/CD variables
+  DAST_WEBSITE: "$NGROK_URL/dvwa"
+
+  # Configuración de autenticación DVWA
+  DAST_AUTH_URL: "$NGROK_URL/dvwa/login.php"
+  DAST_AUTH_USERNAME: "admin"
+  DAST_AUTH_PASSWORD: "password"
+
+  DAST_AUTH_USERNAME_FIELD: "username"
+  DAST_AUTH_PASSWORD_FIELD: "password"
+  DAST_AUTH_SUBMIT_FIELD: "Login"
+
+  # Detectar sesión autenticada
+  DAST_AUTH_SUCCESS_IF_NO_LOGOUT: "true"
+
+  # Variable para permitir omitir el bloqueo
+  OMIT_SECURITY_GATE: "false"
+
+
+artifact_export:
   stage: dast
-  image: owasp/zap2docker-stable
-
+  image: alpine
   script:
-    - mkdir resultados
-    - zap-baseline.py -t https://$NGROK_URL/dvwa -J resultados/Artifact_Desarrollo_Seguro.json || true
-    - cat resultados/Artifact_Desarrollo_Seguro.json
-
-    # Detectar vulnerabilidades
-    - |
-      if grep -E '"riskcode": "[2-3]"' resultados/Artifact_Desarrollo_Seguro.json; then
-        echo "¡Se han encontrado vulnerabilidades críticas, altas o medias!"
-        exit 1
-      fi
-
+    - cp gl-dast-report.json Artifact_Desarrollo_Seguro.json
   artifacts:
     name: "Artifact_Desarrollo_Seguro"
     paths:
-      - resultados/Artifact_Desarrollo_Seguro.json
+      - Artifact_Desarrollo_Seguro.json
+    expire_in: 1 week
+
+
+security_gate:
+  stage: dast
+  image: alpine
+  script:
+    - apk add --no-cache jq
+    - |
+      if [ "$OMIT_SECURITY_GATE" = "true" ]; then
+        echo "Se ha omitido el control de seguridad"
+        exit 0
+      fi
+
+      if jq '.vulnerabilities[] | select(.severity=="Critical" or .severity=="High" or .severity=="Medium")' gl-dast-report.json; then
+        echo "¡Se han encontrado vulnerabilidades críticas, altas o medias!"
+        exit 1
+      else
+        echo "No se encontraron vulnerabilidades críticas, altas o medias"
+      fi

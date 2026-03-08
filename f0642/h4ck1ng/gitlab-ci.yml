@@ -1,12 +1,14 @@
 include:
   - template: Security/Secret-Detection.gitlab-ci.yml
   - template: Jobs/Dependency-Scanning.latest.gitlab-ci.yml
+  - template: Jobs/SAST.latest.gitlab-ci.yml
 
 stages:
   - build
   - secrets
   - test
   - sca
+  - sast
   - security
   - quality
 
@@ -114,3 +116,32 @@ sca_vulnerability_check:
       fi
 #  Quitar el hashtag para probar todo el pipeline aunque existan vulnerabilidades.
   allow_failure: true
+
+sast:
+  stage: sast
+
+  after_script:
+    - echo "Procesando resultados del análisis SAST..."
+
+    - |
+      if [ -f gl-sast-report.json ]; then
+        cp gl-sast-report.json Artifact_Desarrollo_Seguro.json
+      else
+        echo "{}" > Artifact_Desarrollo_Seguro.json
+      fi
+
+    - |
+      if grep -qiE '"severity"\s*:\s*"(critical|high|medium)"' Artifact_Desarrollo_Seguro.json; then
+        echo "¡Se han encontrado vulnerabilidades críticas, altas o medias!"
+        exit 1
+      else
+        echo "✅ No hay ninguna vulnerabilidad"
+      fi
+
+  artifacts:
+    when: always
+    paths:
+      - Artifact_Desarrollo_Seguro.json
+
+  # Quitar el hashtag para probar todo el pipeline aunque existan vulnerabilidades
+  # allow_failure: true

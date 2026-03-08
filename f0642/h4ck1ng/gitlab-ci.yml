@@ -9,6 +9,7 @@ stages:
   - test
   - sca
   - sast
+  - snyk
   - security
   - quality
 
@@ -147,19 +148,15 @@ sast:
   # allow_failure: true
 
 snyk_sast:
-  stage: sast                   # Stage: SAST, separado de test para diferenciar seguridad de pruebas normales
-  image: node:18                # Imagen con Node.js y npm para instalar Snyk CLI
+  stage: snyk
+  image: node:18
   variables:
-    SNYK_TOKEN: $SNYK_TOKEN     # Token personal de Snyk configurado como variable protegida
+    SNYK_TOKEN: $SNYK_TOKEN  # GitLab CI variable protegida
   script:
-    - npm install -g snyk        # Instala la CLI de Snyk
-    - snyk auth $SNYK_TOKEN      # Autentica con el token
-    - snyk test --json > Artifact_Desarrollo_Seguro.json
+    - npm install -g snyk
+    - snyk test --severity-threshold=medium --json > Artifact_Desarrollo_Seguro.json
   artifacts:
     paths:
-      - Artifact_Desarrollo_Seguro.json   # Guardamos los resultados como artifact
-    expire_in: 1 week                       # Artifact disponible por una semana                     
-  rules:
-    - if: '$CI_COMMIT_BRANCH'             # Se ejecuta en todas las ramas
+      - Artifact_Desarrollo_Seguro.json
   # Quitar el hashtag para probar todo el pipeline aunque existan vulnerabilidades
   # allow_failure: true

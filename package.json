@@ -1,11 +1,12 @@
 {
-    "name": "h4ck1ng",
+    "name": "snyk-vulnerable-project",
     "version": "1.0.0",
-    "description": "Proyecto de pruebas de seguridad",
-    "main": "src/index.js",
-    "scripts": {
-      "start": "node src/index.js"
-    },
-    "dependencies": {},
-    "devDependencies": {}
-  }
+    "description": "Proyecto de prueba para detectar vulnerabilidades con Snyk",
+    "dependencies": {
+      "lodash": "4.17.11",
+      "minimist": "0.0.8",
+      "serialize-javascript": "2.1.1",
+      "handlebars": "4.0.12",
+      "node-fetch": "2.6.0"
+    }
+}

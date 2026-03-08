@@ -3,10 +3,10 @@
     "version": "1.0.0",
     "description": "Proyecto de prueba para detectar vulnerabilidades con Snyk",
     "dependencies": {
-      "lodash": "4.17.11",
-      "minimist": "0.0.8",
-      "serialize-javascript": "2.1.1",
-      "handlebars": "4.0.12",
-      "node-fetch": "2.6.0"
+      "lodash": "4.17.23",
+      "minimist": "1.2.6",
+      "serialize-javascript": "7.0.3",
+      "handlebars": "4.7.7",
+      "node-fetch": "2.6.7"
     }
 }

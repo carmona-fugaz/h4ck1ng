@@ -184,7 +184,7 @@ snyk_sast:
 dast:
   stage: dast_scan
   variables:
-    # Variables locales al job derivadas de NGROK_URL
+    # Variables locales al job derivadas de NGROK_URL.
     DAST_TARGET_URL: "$NGROK_URL/dvwa/"
     DAST_AUTH_URL: "$NGROK_URL/dvwa/login.php"
     DAST_USERNAME_FIELD: "css:input[name='username']"

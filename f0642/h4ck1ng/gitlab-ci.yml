@@ -2,12 +2,14 @@ include:
   - template: Security/Secret-Detection.gitlab-ci.yml
   - template: Jobs/Dependency-Scanning.latest.gitlab-ci.yml
   - template: Jobs/SAST.latest.gitlab-ci.yml
+  - template: Security/DAST.gitlab-ci.yml
 
 stages:
   - build
   - secrets
   - test
   - sca
+  - dast
   - sast
   - snyk
   - security
@@ -145,7 +147,7 @@ sast:
       - Artifact_Desarrollo_Seguro.json
 
   # Quitar el hashtag para probar todo el pipeline aunque existan vulnerabilidades
-  # allow_failure: true
+  allow_failure: true
 
 snyk_sast:
   stage: snyk
@@ -156,15 +158,24 @@ snyk_sast:
     - npm install -g snyk
     - npm install
   script:
-    # Ejecuta Snyk y guarda la salida (éxito o error) en el artifact
-    - snyk test --severity-threshold=medium --json > Artifact_Desarrollo_Seguro.json
-    - snyk_exit_code=$?
-    # Muestra las primeras líneas del JSON en el log (útil para depuración)
-    - head -20 Artifact_Desarrollo_Seguro.json
-    # El job fallará si snyk devuelve código distinto de cero, pero el artifact se guarda igual
-    - exit $snyk_exit_code
+      if snyk test --severity-threshold=medium --json > snyk-report.json; then
+        snyk_exit_code=0
+      else
+        snyk_exit_code=1
+      fi
+      - |
+      if [ $snyk_exit_code -eq 0 ]; then
+        echo "✅ No se encontraron vulnerabilidades críticas, altas o medias."
+      elif [ $snyk_exit_code -eq 1 ]; then
+        echo "❌ ¡Se han encontrado vulnerabilidades críticas, altas o medias! Pipeline detenida."
+        exit 1
+      else
+        echo "⚠️ Error en la ejecución de Snyk (código $snyk_exit_code). Posible problema de autenticación, red o configuración."
+        exit $snyk_exit_code
+      fi
   artifacts:
     paths:
       - Artifact_Desarrollo_Seguro.json
-    when: always                # El artifact se sube incluso si el job falla
-  allow_failure: true  
+    when: always                
+  # Quitar el hashtag para probar todo el pipeline aunque existan vulnerabilidades
+  allow_failure: true

@@ -184,7 +184,6 @@ snyk_sast:
 dast:
   stage: dast_scan
   variables:
-    # Asegurar que NGROK_URL está definida sin barra final.
     DAST_TARGET_URL: "$NGROK_URL/dvwa/"
     DAST_AUTH_URL: "$NGROK_URL/dvwa/login.php"
     DAST_USERNAME_FIELD: "css:input[name='username']"
@@ -193,17 +192,30 @@ dast:
     DAST_BROWSER_SCAN: "true"
     DAST_FULL_SCAN_ENABLED: "true"
     DAST_REQUEST_HEADERS: "ngrok-skip-browser-warning: true"
+    # Aumentar profundidad de rastreo (por si acaso)
     DAST_CRAWL_DEPTH: 10
-    DAST_SITEMAP_URL: "$NGROK_URL/dvwa/sitemap.xml"
+    # --- NUEVO: Especificar rutas a escanear ---
+    DAST_PATHS: >-
+      /dvwa/vulnerabilities/sqli/
+      /dvwa/vulnerabilities/sqli/?id=1&Submit=Submit
+      /dvwa/vulnerabilities/xss_r/
+      /dvwa/vulnerabilities/xss_r/?name=test
+      /dvwa/vulnerabilities/xss_s/
+      /dvwa/vulnerabilities/exec/
+      /dvwa/vulnerabilities/csrf/
+      /dvwa/vulnerabilities/fi/
+      /dvwa/vulnerabilities/upload/
+      /dvwa/vulnerabilities/captcha/
+      /dvwa/vulnerabilities/weak_id/
     OMIT_SECURITY_GATE: "false"
   before_script:
     - apk add --no-cache curl grep sed
     - |
-      set -x  # Modo depuración (quitar si no se desea)
+      set -x  # Modo depuración (opcional, puedes quitarlo)
 
       LOGIN_URL="$NGROK_URL/dvwa/login.php"
       SECURITY_URL="$NGROK_URL/dvwa/security.php"
-      INDEX_URL="$NGROK_URL/dvwa/index.php"  # Página principal tras login
+      INDEX_URL="$NGROK_URL/dvwa/index.php"
       USERNAME="admin"
       PASSWORD="password"
       
@@ -231,23 +243,21 @@ dast:
         -d "security=low&user_token=$TOKEN&Change=Change" \
         "$SECURITY_URL" > /dev/null || { echo "❌ Falló el POST para cambiar nivel"; exit 1; }
       
-      # 4. Visitar la página principal para que el escáner descubra enlaces
-      echo "🌐 Visitando página principal para descubrir enlaces..."
+      # 4. Visitar página principal para actualizar cookies
       curl -s -L -b "$COOKIE_FILE" -c "$COOKIE_FILE" "$INDEX_URL" > /dev/null
       
-      # 5. Extraer cookies actualizadas
+      # 5. Extraer cookies
       PHPSESSID=$(grep -E '\sPHPSESSID\s' "$COOKIE_FILE" | tail -1 | awk '{print $7}')
       SECURITY=$(grep -E '\ssecurity\s' "$COOKIE_FILE" | tail -1 | awk '{print $7}')
       
       echo "🍪 Cookies: PHPSESSID=$PHPSESSID, security=$SECURITY"
       
-      # 6. Verificar que el nivel sea "low"
+      # 6. Verificar nivel "low"
       CHECK_PAGE=$(curl -s -L -b "$COOKIE_FILE" "$SECURITY_URL")
       if echo "$CHECK_PAGE" | grep -q '<option value="low" selected>'; then
         echo "✅ Nivel de seguridad confirmado: low"
       else
-        echo "❌ El nivel NO es low. Posible error."
-        echo "🔍 Contenido de security.php:"
+        echo "❌ El nivel NO es low. Abortando."
         echo "$CHECK_PAGE" | head -20
         exit 1
       fi
@@ -264,7 +274,7 @@ dast:
       
       rm -f "$COOKIE_FILE"
       
-    - echo "🚀 Iniciando DAST autenticado en $DAST_TARGET_URL"
+    - echo "🚀 Iniciando DAST autenticado en $DAST_TARGET_URL con rutas específicas"
   after_script:
     - |
       if [ -f "$CI_PROJECT_DIR/gl-dast-report.json" ]; then

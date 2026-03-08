@@ -192,7 +192,6 @@ dast:
     DAST_AUTH_PASSWORD: "password"
     DAST_BROWSER_SCAN: "true"
     DAST_FULL_SCAN_ENABLED: "true"
-    DAST_CRAWL_DEPTH: 20
     DAST_CRAWL_STRATEGY: "depth-first"
     DAST_REQUEST_HEADERS: "ngrok-skip-browser-warning: true"
     DAST_EXCLUDE_URLS: "logout.php"
@@ -201,9 +200,13 @@ dast:
     DAST_MAX_ATTEMPTS_PER_TARGET: 500
     DAST_MAX_CONCURRENT_ATTACKS_PER_TARGET: 10
     DAST_MAX_FAILED_REQUESTS_PER_TARGET: 50
+    DAST_CRAWL_DEPTH: 15
+    DAST_FULL_SCAN_ENABLED: "true"
   before_script:
     - echo "Iniciando DAST autenticado en $DAST_TARGET_URL"
-
+  script:
+    # Ejecuta el escaneo DAST con timeout de 12 minutos (720s)
+    - timeout 720s /analyzer/gitlab-dast-scan
   after_script:
     - |
       if [ -f "$CI_PROJECT_DIR/gl-dast-report.json" ]; then
@@ -229,3 +232,4 @@ dast:
 
   rules:
     - if: $CI_COMMIT_REF_NAME == "main" || $CI_PIPELINE_SOURCE == "merge_request_event"
+  timeout: 12m

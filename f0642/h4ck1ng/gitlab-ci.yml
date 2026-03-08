@@ -152,7 +152,7 @@ snyk_sast:
   image: node:18
   variables:
     SNYK_TOKEN: $SNYK_TOKEN  # GitLab CI variable protegida
-    before_script:
+  before_script:
     - npm install -g snyk
     - npm install
   script:
@@ -161,7 +161,7 @@ snyk_sast:
       if snyk test --severity-threshold=medium --json > snyk-report.json; then
         snyk_exit_code=0
       else
-        snyk_exit_code=$?
+        snyk_exit_code=1
       fi
 
     # Analiza el código de salida y muestra el mensaje correspondiente

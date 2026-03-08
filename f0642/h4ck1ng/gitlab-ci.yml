@@ -180,18 +180,6 @@ snyk_sast:
   # Quitar el hashtag para probar todo el pipeline aunque existan vulnerabilidades
   allow_failure: true
 
-artifact_export:
-  stage: dast
-  image: alpine
-  needs: ["dast"]                     # ← añadir esta línea
-  script:
-    - cp gl-dast-report.json Artifact_Desarrollo_Seguro.json
-  artifacts:
-    name: "Artifact_Desarrollo_Seguro"
-    paths:
-      - Artifact_Desarrollo_Seguro.json
-    expire_in: 1 week
-
 dast:
   stage: dast
   variables:

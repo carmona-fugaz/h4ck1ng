@@ -186,7 +186,7 @@ dast_scan:
 
   script:
     - mkdir resultados
-    - zap-baseline.py -t https://TU_URL_NGROK/dvwa -J resultados/Artifact_Desarrollo_Seguro.json || true
+    - zap-baseline.py -t https://$NGROK_URL/dvwa -J resultados/Artifact_Desarrollo_Seguro.json || true
     - cat resultados/Artifact_Desarrollo_Seguro.json
 
     # Detectar vulnerabilidades

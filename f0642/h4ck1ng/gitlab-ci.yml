@@ -181,49 +181,42 @@ snyk_sast:
   allow_failure: true
 
 variables:
-  # URL pública de ngrok (CI/CD variable)
-  NGROK_URL: "https://example.ngrok.io"  # reemplazar por la variable real de GitLab
-
-  # Login DVWA
+  # Solo necesitas definir NGROK_URL en CI/CD
+  # Variables que necesita el template, derivadas de NGROK_URL
   DAST_TARGET_URL: "$NGROK_URL/dvwa/"
   DAST_AUTH_URL: "$NGROK_URL/dvwa/login.php"
   DAST_USERNAME_FIELD: "css:input[name='username']"
   DAST_PASSWORD_FIELD: "css:input[name='password']"
   DAST_SUBMIT_FIELD: "css:input[type='submit']"
-
   DAST_BROWSER_SCAN: "true"
   DAST_FULL_SCAN_ENABLED: "true"
-
-  # Header para evitar advertencia de ngrok
   DAST_REQUEST_HEADERS: "ngrok-skip-browser-warning: true"
-
-  # Permite omitir bloqueo de seguridad
   OMIT_SECURITY_GATE: "false"
-
 
 dast:
   stage: dast_scan
-  image: alpine
+  extends: .dast
   before_script:
     - echo "Iniciando DAST autenticado en $DAST_TARGET_URL"
-  script:
-    # Ejecuta el escaneo del template GitLab
-    - echo "Ejecutando DAST..."
-    # El template genera gl-dast-report.json automáticamente
-    - echo "Generando artifact..."
-    - cp gl-dast-report.json Artifact_Desarrollo_Seguro.json
-    # Bloqueo de pipeline si hay vulnerabilidades críticas, altas o medias
-    - apk add --no-cache jq
+  after_script:
     - |
-      if [ "$OMIT_SECURITY_GATE" = "true" ]; then
-        echo "Se ha omitido el control de seguridad"
-        exit 0
-      fi
-      if jq '.vulnerabilities[] | select(.severity=="Critical" or .severity=="High" or .severity=="Medium")' gl-dast-report.json; then
-        echo "¡Se han encontrado vulnerabilidades críticas, altas o medias!"
-        exit 1
+      # Copiar artifact si existe
+      if [ -f "$CI_PROJECT_DIR/gl-dast-report.json" ]; then
+        cp "$CI_PROJECT_DIR/gl-dast-report.json" Artifact_Desarrollo_Seguro.json
       else
-        echo "No se encontraron vulnerabilidades críticas, altas o medias"
+        echo "gl-dast-report.json no existe. El escaneo falló o no se generó."
+        exit 1
+      fi
+
+      # Bloqueo de pipeline si hay vulnerabilidades críticas/altas/medias
+      if [ "$OMIT_SECURITY_GATE" != "true" ]; then
+        apk add --no-cache jq
+        if jq '.vulnerabilities[] | select(.severity=="Critical" or .severity=="High" or .severity=="Medium")' "$CI_PROJECT_DIR/gl-dast-report.json"; then
+          echo "¡Se han encontrado vulnerabilidades críticas, altas o medias!"
+          exit 1
+        else
+          echo "No se encontraron vulnerabilidades críticas, altas o medias"
+        fi
       fi
   artifacts:
     name: "Artifact_Desarrollo_Seguro"

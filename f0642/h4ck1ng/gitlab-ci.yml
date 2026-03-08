@@ -194,14 +194,8 @@ dast:
     DAST_FULL_SCAN_ENABLED: "true"
     DAST_CRAWL_STRATEGY: "depth-first"
     DAST_REQUEST_HEADERS: "ngrok-skip-browser-warning: true"
-    DAST_EXCLUDE_URLS: "logout.php"
     OMIT_SECURITY_GATE: "true"
-    DAST_MAX_REQUESTS_PER_TARGET: 500
-    DAST_MAX_ATTEMPTS_PER_TARGET: 500
-    DAST_MAX_CONCURRENT_ATTACKS_PER_TARGET: 10
-    DAST_MAX_FAILED_REQUESTS_PER_TARGET: 50
-    DAST_CRAWL_DEPTH: 15
-    DAST_FULL_SCAN_ENABLED: "true"
+    DAST_CRAWL_DEPTH: 5
   before_script:
     - echo "Iniciando DAST autenticado en $DAST_TARGET_URL"
 

@@ -181,31 +181,26 @@ snyk_sast:
   allow_failure: true
 
 variables:
-  # URL pública de ngrok (definida en CI/CD Variables de GitLab)
   DAST_TARGET_URL: "$NGROK_URL/dvwa/"
   DAST_AUTH_URL: "$NGROK_URL/dvwa/login.php"
 
-  # Campos del login de DVWA
   DAST_USERNAME_FIELD: "css:input[name='username']"
   DAST_PASSWORD_FIELD: "css:input[name='password']"
   DAST_SUBMIT_FIELD: "css:input[type='submit']"
 
   DAST_BROWSER_SCAN: "true"
   DAST_FULL_SCAN_ENABLED: "true"
-
-  # Evitar warning de ngrok
   DAST_REQUEST_HEADERS: "ngrok-skip-browser-warning: true"
 
-  # Variable para omitir bloqueo (opcional)
   OMIT_SECURITY_GATE: "false"
 
 
-# Job para generar el artifact solicitado
 artifact_export:
   stage: dast
   image: alpine
   needs:
-    - dast  # depende del job 'dast' que crea gl-dast-report.json
+    - job: dast
+      optional: true
   script:
     - echo "Creando artifact para el desarrollador"
     - cp gl-dast-report.json Artifact_Desarrollo_Seguro.json
@@ -216,17 +211,17 @@ artifact_export:
     expire_in: 1 week
 
 
-# Job que bloquea pipeline si hay vulnerabilidades críticas/altas/medias
 security_gate:
   stage: dast
   image: alpine
   needs:
-    - dast
+    - job: dast
+      optional: true
   script:
     - apk add --no-cache jq
     - |
       if [ "$OMIT_SECURITY_GATE" = "true" ]; then
-        echo "Control de seguridad omitido para pruebas"
+        echo "Se ha omitido el control de seguridad"
         exit 0
       fi
 

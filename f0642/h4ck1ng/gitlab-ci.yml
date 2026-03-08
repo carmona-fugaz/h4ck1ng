@@ -180,36 +180,26 @@ snyk_sast:
   # Quitar el hashtag para probar todo el pipeline aunque existan vulnerabilidades
   allow_failure: true
 
-# Artifact y bloqueo en un job independiente que depende del DAST oficial
 dast:
   stage: dast_scan
   variables:
-    # Variables locales al job derivadas de NGROK_URL.
     DAST_TARGET_URL: "$NGROK_URL/dvwa/"
     DAST_AUTH_URL: "$NGROK_URL/dvwa/login.php"
-
     DAST_USERNAME_FIELD: "css:input[name='username']"
     DAST_PASSWORD_FIELD: "css:input[name='password']"
     DAST_SUBMIT_FIELD: "css:input[type='submit']"
-
     DAST_AUTH_USERNAME: "admin"
     DAST_AUTH_PASSWORD: "password"
-
     DAST_BROWSER_SCAN: "true"
     DAST_FULL_SCAN_ENABLED: "true"
-
-    # Para que explore más rutas de DVWA
     DAST_CRAWL_DEPTH: 20
     DAST_CRAWL_STRATEGY: "depth-first"
-
-    # Evitar warnings de ngrok
     DAST_REQUEST_HEADERS: "ngrok-skip-browser-warning: true"
-
-    # Evita que cierre sesión durante el escaneo
     DAST_EXCLUDE_URLS: "logout.php"
-
     OMIT_SECURITY_GATE: "true"
-
+    DAST_MAX_REQUESTS_PER_TARGET: 500
+    DAST_MAX_ATTEMPTS_PER_TARGET: 500
+    
   before_script:
     - echo "Iniciando DAST autenticado en $DAST_TARGET_URL"
 
